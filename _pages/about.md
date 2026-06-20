@@ -31,4 +31,4 @@ I am Jiatuo "Charlie" Zou, a researcher in **Human-Computer Interaction (HCI)** 
 
 My work lies at the intersection of extended reality (XR), wearable computing, multimodal AI, and novel sensing. I design interactive systems that draw on implicit human sensing and environmental context through multimodal AI to deliver adaptive, intelligent user experiences. My broader goal is to understand how emerging sensing and AI capabilities can be translated into interactions that are responsive to a user's situation, intent, and surroundings.
 
-I am applying to PhD programs for Fall 2026. If our research interests align, I welcome the opportunity to connect; email is the best way to reach me.
+I am applying to PhD programs for Fall 2027. If our research interests align, I welcome the opportunity to connect; email is the best way to reach me.
