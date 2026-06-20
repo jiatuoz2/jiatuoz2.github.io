@@ -2,21 +2,94 @@
 ---
 
 @comment{
-  Add your publications below. Jekyll-Scholar renders them on /publications/.
-  Your name (Zou, Jiatuo) is bolded automatically via the scholar: config in
-  _config.yml. To feature a paper on the homepage, add  selected = {true}.
-  For a thumbnail, add  preview = {img.png}  and place the image in
-  assets/img/publication_preview/.
+  Publications for /publications/, rendered by jekyll-scholar.
+  "Zou, Charlie" is bolded automatically via the scholar: config in _config.yml.
 
-  Example of an under-review paper (copy it outside this comment block, then
-  uncomment and edit):
+  Per-entry fields you can add:
+    abbr     = {ISMAR}      colored badge on the left (styled in _data/venues.yml)
+    preview  = {teaser.png} thumbnail; file goes in assets/img/publication_preview/
+    pdf      = {file.pdf}   "PDF" button; file goes in assets/pdf/
+    html     = {url}        "HTML" button (e.g. official IEEE/ACM page)
+    video    = {url|file}   "Video" button
+    poster   = {file.pdf}   "Poster" button (assets/pdf/)
+    slides   = {file.pdf}   "Slides" button (assets/pdf/)
+    code     = {url}        "Code" button
+    abstract = {...}        expandable "Abs" panel
+    selected = {true}       feature on the homepage
 
-  inproceedings{zou2026yourkey,
-    title     = {Your Paper Title},
-    author    = {Zou, Jiatuo and Coauthor, A. and Advisor, B.},
-    booktitle = {Under review},
-    year      = {2026},
-    abstract  = {One-paragraph summary of the work.},
-    selected  = {true}
-  }
+  NOTE: under-review entries intentionally omit pdf/html/video/poster links
+  to preserve double-blind anonymity. Add a preview image only if it does not
+  reveal authorship.
+}
+
+% ---------------------------------------------------------------------------
+% Under review
+% ---------------------------------------------------------------------------
+
+@inproceedings{li2026augmenting,
+  title     = {Augmenting Human Performance with an XR Agent Learning from Online Behavior and BCI Evidence},
+  author    = {Li, Ziheng and He, Xichen and Chen, Haoyan and Zou, Charlie and Bai, Sheng and Yang, Benjamin and Wu, Mengyuan and Ledner, Jake and Cheng, Yi-Jie and Yamauchi, Akito and Turakhia, Dishita G. and Feiner, Steven and Sajda, Paul},
+  booktitle = {ACM Symposium on User Interface Software and Technology (UIST)},
+  year      = {2026},
+  abbr      = {Under review}, 
+  preview   = {olive_teaser.png},
+  abstract  = {We present OLIVE, a framework for adapting a foundation model to provide real-time assistance in temporally demanding, high-stakes and dynamic tasks. OLIVE learns from both explicit behavioral signals (user actions) and implicit physiological signals (fixation-locked EEG) to provide timely guidance to supplement the user's perceptual and action bandwidth. By fusing these complementary channels, OLIVE continuously adapts a frozen vision-language model's belief about which items are currently task-relevant, jointly estimating per-source reliability without manual labels or offline retraining. Through three user studies, where we deploy an assistive agent driven by OLIVE in XR, we show that OLIVE outperforms prior test-time adaptation frameworks in both convergence time and rate. Compared to learning from explicit behaviors alone, the agent combining implicit and explicit learning signals improves user performance, achieving 45% more target coverage. When targets shift silently mid-block, the combined agent re-adapts 2.1x faster than the behavioral-only baseline. These results show OLIVE can be built toward empowering adaptive co-pilot systems that extend human performance under demanding operational conditions.}
+}
+
+@inproceedings{yang2026cascade,
+  title     = {A Messaging Toolkit for Spatial Hierarchical Routing in Interactive Applications},
+  author    = {Yang, Benjamin and Liu, Shanying and Zou, Charlie and He, Xichen and Elvezio, Carmine and Feiner, Steven},
+  booktitle = {ACM Symposium on User Interface Software and Technology (UIST)},
+  year      = {2026},
+  abbr      = {Under review},
+  preview   = {cascade_teaser.png},
+  abstract  = {Interactive applications built on hierarchical scene graphs often rely on complex inter-component communication. Many frameworks for developing these applications support message communication up and down the parent--child hierarchy, but require custom code to define non-hierarchical communication graphs. For example, this includes sending messages between objects based on their spatial proximity, independent of the scene-graph hierarchy. Furthermore, limited prior work has empirically evaluated whether frameworks that support non-hierarchical message routing improve developer productivity over custom code. We present Cascade, a messaging toolkit for hierarchical scene graphs that integrates composable spatial filtering primitives (proximity, direction, bounding region) directly into message routing. Unlike previous work, it enables developers to create non-hierarchical communication graphs that express complex routing patterns in a single chained expression. We evaluate Cascade through a controlled within-subjects experiment comparing task completion time, code correctness, cognitive load, and usability for Cascade and event-based messaging across tasks in robot teleoperation and Internet of Things (IoT) domains.}
+}
+
+@inproceedings{yang2026delegate,
+  title     = {Delegate the Details: Flexible Assembly Constraint Authoring for Collaborative XR},
+  author    = {Yang, Benjamin and He, Xichen and Zou, Charlie and Liu, Jen-Shuo and Tversky, Barbara and Feiner, Steven},
+  booktitle = {IEEE International Symposium on Mixed and Augmented Reality (ISMAR)},
+  year      = {2026},
+  abbr      = {Under review},
+  preview   = {delegate_teaser.png},
+  abstract  = {Extended reality (XR) interfaces for assembly specification typically require users to specify the 6DoF pose of every part. This works well when exact poses are necessary, but can impose unneeded constraints when not. We present a collaborative XR constraint-authoring interface that supports a spectrum of specification authority. In our interface, an author can specify groups of parts and transfer them to a human or robot executor that carries out the author's instructions in the physical world. In prescribed mode, the author specifies the 6DoF pose of a part or group. In delegated mode, the author entrusts the executor to determine the 6DoF pose of a part or group. Both modes can be mixed within a single task. We conducted a within-subjects study comparing prescribed-only authoring against dual-mode authoring. Results show that dual-mode authoring significantly reduced authoring task completion time and perceived workload. Most participants significantly preferred dual-mode, with delegation rate scaling with the complexity of authored structures. We also evaluated both conditions offline with a robot executor, feeding authored constraints through a workspace optimizer and motion planner. Delegated constraints achieved significantly higher inter-group clearance than prescribed-only specifications.}
+}
+
+% ---------------------------------------------------------------------------
+% Published
+% ---------------------------------------------------------------------------
+
+@inproceedings{yang2026bimanual,
+  title     = {Bimanual XR Specification of Relative and Absolute Assembly Hierarchies for Teleoperation},
+  author    = {Yang, Ben and He, Xichen and Zou, Charlie and Liu, Jen-Shuo and Tversky, Barbara and Feiner, Steven},
+  booktitle = {2026 IEEE Conference on Virtual Reality and 3D User Interfaces Abstracts and Workshops (VRW)},
+  year      = {2026},
+  abbr      = {IEEE VR},
+  publisher = {IEEE},
+  preview   = {bimanual_teaser.jpg},
+  poster    = {2603.01495v1.pdf},
+  doi      = {10.1109/VRW70859.2026.00191},
+  abstract  = {We present a bimanual XR interaction approach for specifying remote assembly tasks as hierarchies of relative and absolute object constraints that specify high-level teleoperation goals for robots. Grabbing one object in each hand creates a constraint group (visualized as a hull) and groups can be nested into hierarchies. Each group can be relative (with a robot-specifiable 6DoF pose) or absolute (with an author-specified fixed 6DoF pose) in relation to its parent. A relative group specifies a subassembly that can be constructed at a location chosen by the robot software for efficiency rather than mandated by the user.}
+}
+
+@inproceedings{yang2025vrguidance,
+  title     = {Virtual Reality Task Guidance Through Relative 6DoF Pose Specification},
+  author    = {Yang, Ben and He, Xichen and Zou, Charlie and Liu, Jen-Shuo and Tversky, Barbara and Feiner, Steven},
+  booktitle = {2025 IEEE International Symposium on Mixed and Augmented Reality Adjunct (ISMAR-Adjunct)},
+  year      = {2025},
+  abbr      = {ISMAR},
+  publisher = {IEEE},
+  preview   = {virtual_teaser.png},
+  poster    = {yang2025-task-guidance.pdf},
+  doi      = {10.1109/ISMAR-Adjunct68609.2025.00247},
+  abstract = {Virtual reality (VR) systems for guiding remote physical tasks typically require object poses to be specified in absolute world coordinates. However, many of these tasks only need object poses to
+be specified relative to each other. Thus, supporting only absolute
+pose specification can create inefficiencies in giving or following
+task guidance when unnecessary constraints are imposed. We are
+developing a VR task-guidance system that avoids this by enabling
+relative 6DoF poses to be specified within subsets of objects. We
+describe our user interface, including how geometric relationships
+are specified and several ways in which they are visualized, and our
+plans for validating our approach against existing techniques.}
 }

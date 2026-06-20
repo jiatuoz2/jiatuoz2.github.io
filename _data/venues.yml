@@ -1,9 +1,17 @@
-"AJP":
-  url: https://aapt.scitation.org/journal/ajp
-  color: "#00369f"
+# Maps a bib entry's `abbr` to a colored badge (and optional link) on /publications/.
+# Key must match the `abbr` field exactly.
 
-"PhysRev":
-  url: https://journals.aps.org/
+"Under review":
+  color: "#b08968" # muted brown — signals not-yet-published, no link
 
-"Vision":
-  color: "#009f36"
+"UIST":
+  url: https://uist.acm.org/
+  color: "#0076df"
+
+"ISMAR":
+  url: https://www.ieee-ismar.org/
+  color: "#e63946"
+
+"IEEE VR":
+  url: https://ieeevr.org/
+  color: "#1d3557"
