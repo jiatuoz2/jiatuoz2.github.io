@@ -4,6 +4,9 @@
 "Under review":
   color: "#b08968" # muted brown — signals not-yet-published, no link
 
+"Cond. Accept":
+  color: "#2a9d8f" # teal — conditionally accepted, not yet published, no link
+
 "UIST":
   url: https://uist.acm.org/
   color: "#0076df"
