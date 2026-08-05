@@ -1,5 +1,5 @@
 metadata:
-  last_updated: '2026-06-19'
+  last_updated: '2026-08-05'
 papers:
   0BX8YlUAAAAJ:u-x6o8ySG0sC:
     citations: 0
@@ -7,5 +7,5 @@ papers:
     year: '2026'
   0BX8YlUAAAAJ:u5HHmVD_uO8C:
     citations: 1
-    title: Virtual Reality Task Guidance Through Relative 6DoF Pose Specification
+    title: Virtual reality task guidance through relative 6dof pose specification
     year: '2025'
