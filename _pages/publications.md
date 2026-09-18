@@ -18,3 +18,5 @@ nav_order: 1
 {% bibliography %}
 
 </div>
+
+{% include publication_video_player.liquid %}

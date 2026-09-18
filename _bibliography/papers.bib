@@ -23,25 +23,30 @@
 }
 
 % ---------------------------------------------------------------------------
-% Under review
+% Accepted and under review
 % ---------------------------------------------------------------------------
 
 @inproceedings{li2026augmenting,
   title     = {Augmenting Human Performance with an XR Agent Learning from Online Behavior and BCI Evidence},
-  author    = {Li, Ziheng and He, Xichen and Chen, Haoyan and Zou, Charlie and Bai, Sheng and Yang, Benjamin and Wu, Mengyuan and Ledner, Jake and Cheng, Yi-Jie and Yamauchi, Akito and Turakhia, Dishita G. and Feiner, Steven and Sajda, Paul},
+  author    = {Li*, Ziheng and He*, Xichen and Chen*, Haoyan and Zou*, Charlie and Bai, Sheng and Yang, Benjamin and Wu, Mengyuan and Ledner, Jake and Cheng, Yi-Jie and Yamauchi, Akito and Turakhia, Dishita G. and Feiner, Steven and Sajda, Paul},
   booktitle = {ACM Symposium on User Interface Software and Technology (UIST)},
   year      = {2026},
-  abbr      = {Cond. Accept}, 
-  preview   = {olive_teaser.png},
+  abbr      = {UIST},
+  annotation = {* Co-first authors; equal contribution.},
+  arxiv     = {2608.30369},
+  pdf       = {https://arxiv.org/pdf/2608.30369},
+  video     = {/assets/video/olive_teaser.mp4},
+  preview   = {olive_video_preview.jpg},
   abstract  = {We present OLIVE, a framework for adapting a foundation model to provide real-time assistance in temporally demanding, high-stakes and dynamic tasks. OLIVE learns from both explicit behavioral signals (user actions) and implicit physiological signals (fixation-locked EEG) to provide timely guidance to supplement the user's perceptual and action bandwidth. By fusing these complementary channels, OLIVE continuously adapts a frozen vision-language model's belief about which items are currently task-relevant, jointly estimating per-source reliability without manual labels or offline retraining. Through three user studies, where we deploy an assistive agent driven by OLIVE in XR, we show that OLIVE outperforms prior test-time adaptation frameworks in both convergence time and rate. Compared to learning from explicit behaviors alone, the agent combining implicit and explicit learning signals improves user performance, achieving 45% more target coverage. When targets shift silently mid-block, the combined agent re-adapts 2.1x faster than the behavioral-only baseline. These results show OLIVE can be built toward empowering adaptive co-pilot systems that extend human performance under demanding operational conditions.}
 }
 
-@comment{yang2026cascade,
-  title     = {A Messaging Toolkit for Spatial Hierarchical Routing in Interactive Applications},
+@inproceedings{yang2027cascade,
+  title     = {Cascade: Spatial Routing Abstractions for Human Developers and AI Coding Agents},
   author    = {Yang, Benjamin and Liu, Shanying and Zou, Charlie and He, Xichen and Elvezio, Carmine and Feiner, Steven},
-  booktitle = {ACM Symposium on User Interface Software and Technology (UIST)},
-  year      = {2026},
+  booktitle = {ACM CHI Conference on Human Factors in Computing Systems (CHI)},
+  year      = {2027},
   abbr      = {Under review},
+  additional_info = {Resubmitted to CHI 2027; under review.},
   preview   = {cascade_teaser.png},
   abstract  = {Interactive applications built on hierarchical scene graphs often rely on complex inter-component communication. Many frameworks for developing these applications support message communication up and down the parent--child hierarchy, but require custom code to define non-hierarchical communication graphs. For example, this includes sending messages between objects based on their spatial proximity, independent of the scene-graph hierarchy. Furthermore, limited prior work has empirically evaluated whether frameworks that support non-hierarchical message routing improve developer productivity over custom code. We present Cascade, a messaging toolkit for hierarchical scene graphs that integrates composable spatial filtering primitives (proximity, direction, bounding region) directly into message routing. Unlike previous work, it enables developers to create non-hierarchical communication graphs that express complex routing patterns in a single chained expression. We evaluate Cascade through a controlled within-subjects experiment comparing task completion time, code correctness, cognitive load, and usability for Cascade and event-based messaging across tasks in robot teleoperation and Internet of Things (IoT) domains.}
 }
@@ -51,8 +56,10 @@
   author    = {Yang, Benjamin and He, Xichen and Zou, Charlie and Liu, Jen-Shuo and Tversky, Barbara and Feiner, Steven},
   booktitle = {IEEE International Symposium on Mixed and Augmented Reality (ISMAR)},
   year      = {2026},
-  abbr      = {Cond. Accept},
-  preview   = {delegate_teaser.png},
+  abbr      = {ISMAR},
+  pdf       = {ismar26a-sub1071-cam-i5.pdf},
+  video     = {/assets/video/delegate_teaser.mp4},
+  preview   = {delegate_video_preview.jpg},
   abstract  = {Extended reality (XR) interfaces for assembly specification typically require users to specify the 6DoF pose of every part. This works well when exact poses are necessary, but can impose unneeded constraints when not. We present a collaborative XR constraint-authoring interface that supports a spectrum of specification authority. In our interface, an author can specify groups of parts and transfer them to a human or robot executor that carries out the author's instructions in the physical world. In prescribed mode, the author specifies the 6DoF pose of a part or group. In delegated mode, the author entrusts the executor to determine the 6DoF pose of a part or group. Both modes can be mixed within a single task. We conducted a within-subjects study comparing prescribed-only authoring against dual-mode authoring. Results show that dual-mode authoring significantly reduced authoring task completion time and perceived workload. Most participants significantly preferred dual-mode, with delegation rate scaling with the complexity of authored structures. We also evaluated both conditions offline with a robot executor, feeding authored constraints through a workspace optimizer and motion planner. Delegated constraints achieved significantly higher inter-group clearance than prescribed-only specifications.}
 }
 

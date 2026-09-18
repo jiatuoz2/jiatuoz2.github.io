@@ -1,0 +1,9 @@
+<link rel="stylesheet" href="{{ '/assets/css/publication-video.css' | relative_url }}">
+<dialog class="publication-video-dialog" aria-labelledby="publication-video-title">
+  <div class="publication-video-header">
+    <h2 id="publication-video-title">Paper preview</h2>
+    <button type="button" class="publication-video-close" aria-label="Close video">&times;</button>
+  </div>
+  <video controls playsinline preload="none"></video>
+</dialog>
+<script defer src="{{ '/assets/js/publication-video.js' | relative_url }}"></script>
