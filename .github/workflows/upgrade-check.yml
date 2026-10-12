@@ -9,6 +9,8 @@ on:
     paths:
       - "_config.yml"
       - "_data/**"
+      - "_layouts/**"
+      - "_includes/**"
       - "_pages/**"
       - "_posts/**"
       - "_projects/**"
@@ -25,6 +27,8 @@ on:
     paths:
       - "_config.yml"
       - "_data/**"
+      - "_layouts/**"
+      - "_includes/**"
       - "_pages/**"
       - "_posts/**"
       - "_projects/**"

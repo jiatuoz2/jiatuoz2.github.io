@@ -2,9 +2,9 @@ const { test, expect } = require("@playwright/test");
 const { preparePage, compareWithBaseline } = require("./helpers");
 
 const routes = [
-  { path: "al-folio/", id: "home" },
+  // Home and publications intentionally use the personal academic design and
+  // are covered by academic.spec.js, not the upstream v0.16 theme baseline.
   { path: "al-folio/projects/", id: "projects" },
-  { path: "al-folio/publications/", id: "publications" },
   { path: "al-folio/repositories/", id: "repositories" },
 ];
 

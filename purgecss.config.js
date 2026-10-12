@@ -7,6 +7,9 @@ module.exports = {
     "collapse",
     "collapsing",
     "show",
+    // Added by the personal site's progressive mobile navigation at runtime.
+    "js-navigation",
+    "is-open",
     "dropdown-menu",
     "dropdown-item",
     "table",

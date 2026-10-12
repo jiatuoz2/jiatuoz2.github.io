@@ -1,21 +1,8 @@
 const { test, expect } = require("@playwright/test");
 const { preparePage, stabilizeVisuals } = require("./helpers");
 
-test("publications Abs toggle opens and closes", async ({ page }) => {
-  await preparePage(page, "light");
-  await page.goto("/al-folio/publications/", { waitUntil: "networkidle" });
-  await stabilizeVisuals(page);
-
-  const absButton = page.getByRole("button", { name: "Abs" }).first();
-  await expect(absButton).toBeVisible();
-
-  const panel = page.locator(".abstract.hidden").first();
-  await absButton.click();
-  await expect(panel).toHaveClass(/open/);
-
-  await absButton.click();
-  await expect(panel).not.toHaveClass(/open/);
-});
+// Native abstracts and the personal navigation are covered by academic.spec.js.
+// Keep theme runtime checks on routes which still use the core plugin layout.
 
 test("publication popover works without bootstrap compat runtime", async ({ page }) => {
   await preparePage(page, "light");
@@ -33,7 +20,7 @@ test("mobile navbar can expand/collapse", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "mobile", "mobile-only navigation behavior");
 
   await preparePage(page, "light");
-  await page.goto("/al-folio/", { waitUntil: "networkidle" });
+  await page.goto("/al-folio/projects/", { waitUntil: "networkidle" });
 
   const toggle = page.locator(".navbar-toggler").first();
   await expect(toggle).toBeVisible();
@@ -89,7 +76,7 @@ test("navbar menu stays right-aligned on desktop pages", async ({ page }, testIn
   test.skip(testInfo.project.name === "mobile", "desktop-only alignment contract");
 
   await preparePage(page, "light");
-  await page.goto("/al-folio/", { waitUntil: "networkidle" });
+  await page.goto("/al-folio/projects/", { waitUntil: "networkidle" });
   await stabilizeVisuals(page);
 
   const alignment = await page.evaluate(() => {
@@ -114,7 +101,7 @@ test("navbar search button opens modal and toggle buttons use pointer cursor", a
   test.skip(testInfo.project.name === "mobile", "navbar search/theme controls are collapsed under mobile menu");
 
   await preparePage(page, "light");
-  await page.goto("/al-folio/", { waitUntil: "networkidle" });
+  await page.goto("/al-folio/projects/", { waitUntil: "networkidle" });
   await stabilizeVisuals(page);
 
   await page.evaluate(() => {

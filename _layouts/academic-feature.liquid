@@ -1,0 +1,42 @@
+<article class="research-feature" id="research-{{ entry.key }}">
+  <div class="feature-image">
+    {% if entry.video %}
+      <a
+        class="video-trigger"
+        href="{{ entry.video | relative_url }}"
+        data-research-video
+        data-video-title="{{ entry.project | default: entry.title | escape }}"
+        aria-label="Play {{ entry.project | default: entry.title | escape }} research video"
+      >
+        <img
+          src="{{ entry.preview | prepend: '/assets/img/publication_preview/' | relative_url }}"
+          alt="{{ entry.preview_alt | default: entry.title | escape }}"
+          loading="lazy"
+          width="720"
+          height="450"
+        >
+        <span class="play-label"><span aria-hidden="true">▶</span> Watch demo</span>
+      </a>
+    {% else %}
+      <img
+        src="{{ entry.preview | prepend: '/assets/img/publication_preview/' | relative_url }}"
+        alt="{{ entry.preview_alt | default: entry.title | escape }}"
+        loading="lazy"
+        width="720"
+        height="450"
+      >
+    {% endif %}
+  </div>
+  <div class="feature-copy">
+    <div class="feature-meta">
+      <span>
+        {{- entry.abbr }}
+        {{ entry.year -}}</span
+      ><span>{{ entry.research_label }}</span>
+    </div>
+    <h3>{{ entry.project | default: entry.title }}</h3>
+    <p class="feature-title">{{ entry.title }}</p>
+    <p>{{ entry.summary }}</p>
+    <a class="text-link" href="{{ '/publications/' | relative_url }}#paper-{{ entry.key }}">Explore the paper <span aria-hidden="true">↗</span></a>
+  </div>
+</article>
