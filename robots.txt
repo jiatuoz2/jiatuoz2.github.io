@@ -1,4 +1,184 @@
-User-agent: *
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    <meta charset="utf-8" />
+
+
+<title>Jiatuo &quot;Charlie&quot; Zou</title>
+<meta name="description" content="HCI researcher at Northwestern University&#39;s SPICE Lab, working on XR, wearable computing, multimodal AI, and novel sensing." />
+<link rel="canonical" href="https://jiatuoz2.github.io/robots.txt" />
+<meta property="og:type" content="website" />
+<meta property="og:locale" content="en_US" />
+<meta property="og:site_name" content="Jiatuo &quot;Charlie&quot; Zou" />
+<meta property="og:title" content="Jiatuo &quot;Charlie&quot; Zou" />
+<meta property="og:description" content="HCI researcher at Northwestern University&#39;s SPICE Lab, working on XR, wearable computing, multimodal AI, and novel sensing." />
+<meta property="og:url" content="https://jiatuoz2.github.io/robots.txt" />
+<meta property="og:image" content="https://jiatuoz2.github.io/assets/img/profile.jpg" />
+<meta name="twitter:card" content="summary" />
+
+
+<meta name="HandheldFriendly" content="True" />
+<meta name="MobileOptimized" content="320" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<script>
+  document.documentElement.className = document.documentElement.className.replace(/\bno-js\b/g, "") + " js ";
+</script>
+
+<!-- For all browsers -->
+<link rel="stylesheet" href="/assets/css/main.css" />
+
+<meta http-equiv="cleartype" content="on" />
+ <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml" />
+<meta name="theme-color" content="#ffffff" />
+<link rel="stylesheet" href="/assets/css/academicons.css" />
+
+  </head>
+
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <!--[if lt IE 9]>
+  <div class="notice--danger align-center" style="margin: 0">
+    You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> to improve your experience.
+  </div>
+<![endif]-->
+ <div class="masthead">
+  <div class="masthead__inner-wrap">
+    <div class="masthead__menu">
+      <nav id="site-nav" class="greedy-nav" aria-label="Main navigation">
+        <button type="button" aria-label="More navigation links" aria-expanded="false" aria-controls="overflow-navigation">
+          <div class="navicon" aria-hidden="true"></div>
+        </button>
+        <ul class="visible-links">
+          <li class="masthead__menu-item masthead__menu-item--lg masthead__menu-home-item"><a href="/">Charlie Zou</a></li>
+          
+          <li class="masthead__menu-item"><a href="/#about-me">About Me</a></li>
+          
+          <li class="masthead__menu-item"><a href="/#news">News</a></li>
+          
+          <li class="masthead__menu-item"><a href="/#publications">Publications</a></li>
+          
+        </ul>
+        <ul id="overflow-navigation" class="hidden-links hidden"></ul>
+      </nav>
+    </div>
+  </div>
+</div>
+
+
+    <div id="main" role="main" tabindex="-1">
+      
+<div class="sidebar sticky">
+  
+<section class="profile-banner" data-profile-banner itemscope itemtype="https://schema.org/Person" aria-label="Profile and contact information">
+  <div
+    class="banner-scroll-grip"
+    data-scroll-grip
+    role="button"
+    tabindex="0"
+    aria-label="Roll up profile scroll"
+    aria-expanded="true"
+    aria-controls="profile-scroll"
+    hidden
+  ></div>
+  <div class="banner-rigging" aria-hidden="true">
+    <svg class="banner-hanger" viewBox="0 0 260 26" preserveAspectRatio="none" focusable="false">
+      <path class="banner-cord" d="M28 0C26 8 30 18 28 26" />
+      <path class="banner-cord" d="M232 0C234 8 230 18 232 26" />
+    </svg>
+    <span class="banner-rod"></span>
+  </div>
+  <div class="banner-viewport" data-scroll-viewport>
+    <div class="banner-cloth" data-banner-cloth>
+      <canvas class="banner-surface" data-cloth-canvas aria-hidden="true"></canvas>
+      <div class="banner-fabric" id="profile-scroll">
+        <svg class="banner-trim" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+          <path d="M4 2H96V90L50 98L4 90Z" />
+        </svg>
+        <div class="author__avatar">
+          <img src="/assets/img/profile.jpg" alt="Jiatuo &quot;Charlie&quot; Zou" width="278" height="278" itemprop="image" />
+        </div>
+        <div class="banner-identity">
+          <h2 class="author__name" itemprop="name">Jiatuo "Charlie" Zou</h2>
+          <p class="author__bio">HCI Researcher · SPICE Lab</p>
+          <p class="author__affiliation">Northwestern University</p>
+          <p class="banner-location"><i class="fas fa-map-marker-alt" aria-hidden="true"></i> Evanston, Illinois</p>
+        </div>
+        <ul class="banner-links" aria-label="Contact and academic profiles">
+          <li class="banner-email">
+            <a href="mailto:jz3331@columbia.edu"
+              ><i class="fas fa-fw fa-envelope" aria-hidden="true"></i
+              ><span><span class="banner-link-label">Email</span><span class="banner-email-address">jz3331@columbia.edu</span></span></a
+            >
+          </li>
+          <li>
+            <a href="https://scholar.google.com/citations?user=0BX8YlUAAAAJ"
+              ><i class="fas fa-fw fa-graduation-cap" aria-hidden="true"></i><span>Google Scholar</span
+              ><span class="banner-link-arrow" aria-hidden="true">↗</span></a
+            >
+          </li>
+          <li>
+            <a href="https://github.com/jiatuoz2"
+              ><i class="fab fa-fw fa-github" aria-hidden="true"></i><span>GitHub</span><span class="banner-link-arrow" aria-hidden="true">↗</span></a
+            >
+          </li>
+          <li>
+            <a href="https://www.linkedin.com/in/charlie-zou-42b644221/"
+              ><i class="fab fa-fw fa-linkedin" aria-hidden="true"></i><span>LinkedIn</span
+              ><span class="banner-link-arrow" aria-hidden="true">↗</span></a
+            >
+          </li>
+          <li>
+            <a href="/assets/pdf/cv.pdf"
+              ><i class="fas fa-fw fa-file-pdf" aria-hidden="true"></i><span>Curriculum Vitae</span
+              ><span class="banner-link-arrow" aria-hidden="true">↗</span></a
+            >
+          </li>
+        </ul>
+        <span class="banner-monogram" aria-hidden="true">JZ</span>
+      </div>
+    </div>
+  </div>
+</section>
+ 
+</div>
+
+
+
+      <article class="page" itemscope itemtype="http://schema.org/CreativeWork">
+        
+        <div class="page__inner-wrap">
+          <section class="page__content" itemprop="text">User-agent: *
 Disallow:
 
 Sitemap: https://jiatuoz2.github.io/sitemap.xml
+</section>
+        </div>
+      </article>
+    </div>
+
+    <footer class="site-footer">
+  <p>
+    © 2026 Jiatuo "Charlie" Zou · <a href="https://github.com/RayeRen/acad-homepage.github.io">AcadHomepage</a> ·
+    <a href="https://jekyllrb.com/">Jekyll</a>
+  </p>
+</footer>
+<dialog class="research-video-dialog" aria-labelledby="research-video-title">
+  <div class="video-dialog-header">
+    <h2 id="research-video-title">Research video</h2>
+    <button type="button" class="video-close" aria-label="Close video">×</button>
+  </div>
+  <video controls playsinline preload="none"></video>
+  <p><a class="video-direct-link" href="#">Open the video directly</a></p>
+</dialog>
+ <script src="/assets/js/main.min.js"></script>
+<script defer src="/assets/js/site.js"></script>
+<script defer src="/assets/js/cloth-physics.js"></script>
+<script defer src="/assets/js/cloth-renderer.js"></script>
+<script defer src="/assets/js/scroll-physics.js"></script>
+<script defer src="/assets/js/profile-banner.js"></script>
+ 
+
+  </body>
+</html>
