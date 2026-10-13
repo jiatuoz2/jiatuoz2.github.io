@@ -1,21 +1,20 @@
----
----
-
 @comment{
-  Publications for /publications/, rendered by jekyll-scholar.
-  "Zou, Charlie" is bolded automatically via the scholar: config in _config.yml.
+  Publications for the homepage and /publications/.
+  _plugins/publications.rb reads this file; _includes/publication.html renders it.
+  "Zou, Charlie" is bolded automatically by the author's last name.
 
   Per-entry fields you can add:
-    abbr     = {ISMAR}      colored badge on the left (styled in _data/venues.yml)
-    preview  = {teaser.png} thumbnail; file goes in assets/img/publication_preview/
+    abbr     = {ISMAR}      venue badge on the teaser
+    preview  = {teaser.png} image/GIF in assets/img/publication_preview/ or an absolute site path
     pdf      = {file.pdf}   "PDF" button; file goes in assets/pdf/
     html     = {url}        "HTML" button (e.g. official IEEE/ACM page)
     video    = {url|file}   "Video" button
+    video_preview = {/assets/video/teaser.mp4} clickable thumbnail and "Preview" link
     poster   = {file.pdf}   "Poster" button (assets/pdf/)
     slides   = {file.pdf}   "Slides" button (assets/pdf/)
     code     = {url}        "Code" button
     abstract = {...}        expandable "Abs" panel
-    selected = {true}       feature on the homepage
+    summary  = {...}        concise project description
 
   NOTE: under-review entries intentionally omit pdf/html/video/poster links
   to preserve double-blind anonymity. Add a preview image only if it does not
@@ -41,8 +40,9 @@
   annotation = {* Co-first authors; equal contribution.},
   arxiv     = {2608.30369},
   pdf       = {https://arxiv.org/pdf/2608.30369},
-  video     = {/assets/video/olive_teaser.mp4},
-  preview   = {olive_video_preview.jpg},
+  video     = {/research/video/olive.mp4},
+  video_preview = {/assets/video/olive_teaser.mp4},
+  preview   = {/research/video/olive.gif},
   abstract  = {We present OLIVE, a framework for adapting a foundation model to provide real-time assistance in temporally demanding, high-stakes and dynamic tasks. OLIVE learns from both explicit behavioral signals (user actions) and implicit physiological signals (fixation-locked EEG) to provide timely guidance to supplement the user's perceptual and action bandwidth. By fusing these complementary channels, OLIVE continuously adapts a frozen vision-language model's belief about which items are currently task-relevant, jointly estimating per-source reliability without manual labels or offline retraining. Through three user studies, where we deploy an assistive agent driven by OLIVE in XR, we show that OLIVE outperforms prior test-time adaptation frameworks in both convergence time and rate. Compared to learning from explicit behaviors alone, the agent combining implicit and explicit learning signals improves user performance, achieving 45% more target coverage. When targets shift silently mid-block, the combined agent re-adapts 2.1x faster than the behavioral-only baseline. These results show OLIVE can be built toward empowering adaptive co-pilot systems that extend human performance under demanding operational conditions.}
 }
 
@@ -55,7 +55,7 @@
   research  = {human-ai xr},
   research_label = {Spatial computing},
   preview_alt = {A spatial routing demonstration showing objects and routing regions in a 3D scene},
-  additional_info = {Resubmitted to CHI 2027; under review.},
+  additional_info = {Submitted to CHI 2027; under review.},
   preview   = {cascade_teaser.png},
   abstract  = {Interactive applications built on hierarchical scene graphs often rely on complex inter-component communication. Many frameworks for developing these applications support message communication up and down the parent--child hierarchy, but require custom code to define non-hierarchical communication graphs. For example, this includes sending messages between objects based on their spatial proximity, independent of the scene-graph hierarchy. Furthermore, limited prior work has empirically evaluated whether frameworks that support non-hierarchical message routing improve developer productivity over custom code. We present Cascade, a messaging toolkit for hierarchical scene graphs that integrates composable spatial filtering primitives (proximity, direction, bounding region) directly into message routing. Unlike previous work, it enables developers to create non-hierarchical communication graphs that express complex routing patterns in a single chained expression. We evaluate Cascade through a controlled within-subjects experiment comparing task completion time, code correctness, cognitive load, and usability for Cascade and event-based messaging across tasks in robot teleoperation and Internet of Things (IoT) domains.}
 }
@@ -74,7 +74,8 @@
   abbr      = {ISMAR},
   pdf       = {ismar26a-sub1071-cam-i5.pdf},
   video     = {/assets/video/delegate_teaser.mp4},
-  preview   = {delegate_video_preview.jpg},
+  video_preview = {/assets/video/delegate_teaser.mp4},
+  preview   = {/research/video/delegate-the-details.gif},
   abstract  = {Extended reality (XR) interfaces for assembly specification typically require users to specify the 6DoF pose of every part. This works well when exact poses are necessary, but can impose unneeded constraints when not. We present a collaborative XR constraint-authoring interface that supports a spectrum of specification authority. In our interface, an author can specify groups of parts and transfer them to a human or robot executor that carries out the author's instructions in the physical world. In prescribed mode, the author specifies the 6DoF pose of a part or group. In delegated mode, the author entrusts the executor to determine the 6DoF pose of a part or group. Both modes can be mixed within a single task. We conducted a within-subjects study comparing prescribed-only authoring against dual-mode authoring. Results show that dual-mode authoring significantly reduced authoring task completion time and perceived workload. Most participants significantly preferred dual-mode, with delegation rate scaling with the complexity of authored structures. We also evaluated both conditions offline with a robot executor, feeding authored constraints through a workspace optimizer and motion planner. Delegated constraints achieved significantly higher inter-group clearance than prescribed-only specifications.}
 }
 

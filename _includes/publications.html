@@ -1,0 +1,18 @@
+<div data-publications>
+  <form class="publication-search" role="search" aria-label="Publications" hidden>
+    <label class="visually-hidden" for="publication-search">Search publications</label>
+    <i class="fas fa-search" aria-hidden="true"></i>
+    <input
+      id="publication-search"
+      type="search"
+      placeholder="Search titles, authors, venues, keywords…"
+      autocomplete="off"
+      aria-controls="publication-list"
+    />
+    <button type="button" class="publication-search-clear" aria-label="Clear publication search" hidden>Clear</button>
+  </form>
+  <p class="publication-search-status" role="status" aria-live="polite" hidden></p>
+  <div class="publication-list" id="publication-list">
+    {% for paper in site.data.publications %}{% include publication.html paper=paper %}{% endfor %}
+  </div>
+</div>

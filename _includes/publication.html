@@ -1,0 +1,59 @@
+{% assign paper = include.paper %} {% assign pdf_prefix = paper.pdf | slice: 0, 1 %} {% if paper.pdf contains '://' %}{% assign pdf_url = paper.pdf
+%}{% elsif pdf_prefix == '/' %}{% assign pdf_url = paper.pdf | relative_url %}{% else %}{% assign pdf_url = paper.pdf | prepend: '/assets/pdf/' |
+relative_url %}{% endif %} {% assign preview_prefix = paper.preview | slice: 0, 1 %} {% if paper.preview contains '://' %}{% assign preview_url =
+paper.preview %} {% elsif preview_prefix == '/' %}{% assign preview_url = paper.preview | relative_url %} {% else %}{% assign preview_url =
+paper.preview | prepend: '/assets/img/publication_preview/' | relative_url %}{% endif %}
+<article class="paper-box" id="paper-{{ paper.key }}" data-search-keywords="{{ paper.project | append: ' ' | append: paper.research | escape }}">
+  <div class="paper-box-image">
+    <div class="paper-image-wrap">
+      <div class="badge {% if paper.abbr == 'Under review' %}badge--review{% endif %}">
+        {{ paper.abbr }}{% unless paper.abbr == 'Under review' %} {{ paper.year }}{% endunless %}
+      </div>
+      {% assign teaser_video = paper.video_preview | default: paper.video %} {% if teaser_video %}<a
+        class="video-trigger"
+        href="{{ teaser_video | relative_url }}"
+        data-research-video
+        data-video-title="{{ paper.title | escape }}"
+        aria-label="Play video preview for {{ paper.title | escape }}"
+        >{% endif %}
+        <img src="{{ preview_url }}" alt="{{ paper.preview_alt | default: paper.title | escape }}" loading="lazy" width="400" height="250" />
+        {% if teaser_video %}<span class="paper-play" aria-hidden="true">▶</span></a
+      >{% endif %}
+    </div>
+  </div>
+  <div class="paper-box-text">
+    <h3 class="paper-title">{% if paper.pdf %}<a href="{{ pdf_url }}">{{ paper.title }}</a>{% else %}{{ paper.title }}{% endif %}</h3>
+    <p class="paper-authors">
+      {% for author in paper.authors %}{% if author.self %}<strong class="paper-author-self"
+        >{% endif %}{{ author.first }} {{ author.last }}{% if author.self %}</strong
+      >{% endif %}{% unless forloop.last %}{{ ', ' }}{% endunless %}{% endfor %}
+    </p>
+    <p class="paper-venue">{{ paper.booktitle }}, {{ paper.year }}.{% if paper.additional_info %} {{ paper.additional_info }}{% endif %}</p>
+    {% if paper.annotation %}
+    <p class="paper-annotation">{{ paper.annotation }}</p>
+    {% endif %}
+    <p class="paper-links">
+      {% if paper.pdf %}<a href="{{ pdf_url }}">[Paper]</a>{% endif %} {% if paper.arxiv %}<a href="https://arxiv.org/abs/{{ paper.arxiv }}"
+        >[arXiv]</a
+      >{% endif %} {% if paper.doi %}<a href="https://doi.org/{{ paper.doi }}">[DOI]</a>{% endif %} {% if paper.poster %}<a
+        href="{{ paper.poster | prepend: '/assets/pdf/' | relative_url }}"
+        >[Poster]</a
+      >{% endif %} {% if paper.code %}<a href="{{ paper.code }}">[Code]</a>{% endif %} {% if paper.video_preview %}<a
+        href="{{ paper.video_preview | relative_url }}"
+        data-research-video
+        data-video-title="{{ paper.title | escape }} — Preview"
+        >[Preview]</a
+      >{% endif %} {% if paper.video %}<a href="{{ paper.video | relative_url }}" data-research-video data-video-title="{{ paper.title | escape }}"
+        >[Video]</a
+      >{% endif %}
+    </p>
+    {% if paper.summary %}
+    <p class="paper-summary">{{ paper.summary }}</p>
+    {% endif %} {% if paper.abstract %}
+    <details class="paper-abstract">
+      <summary>Abstract</summary>
+      <p>{{ paper.abstract }}</p>
+    </details>
+    {% endif %}
+  </div>
+</article>

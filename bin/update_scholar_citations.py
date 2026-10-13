@@ -5,11 +5,12 @@ import sys
 import yaml
 from datetime import datetime
 from scholarly import scholarly
+from urllib.parse import parse_qs, urlparse
 
 
 def load_scholar_user_id() -> str:
     """Load the Google Scholar user ID from the configuration file."""
-    config_file = "_data/socials.yml"
+    config_file = "_config.yml"
     if not os.path.exists(config_file):
         print(
             f"Configuration file {config_file} not found. Please ensure the file exists and contains your Google Scholar user ID."
@@ -18,10 +19,11 @@ def load_scholar_user_id() -> str:
     try:
         with open(config_file, "r") as f:
             config = yaml.safe_load(f)
-        scholar_user_id = config.get("scholar_userid")
+        scholar_url = config.get("author", {}).get("googlescholar", "")
+        scholar_user_id = parse_qs(urlparse(scholar_url).query).get("user", [None])[0]
         if not scholar_user_id:
             print(
-                "No 'scholar_userid' found in the configuration file. Please add 'scholar_userid' to _data/socials.yml."
+                "No Google Scholar user ID found. Set author.googlescholar in _config.yml."
             )
             sys.exit(1)
         return scholar_user_id

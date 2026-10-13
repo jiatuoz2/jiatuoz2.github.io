@@ -1,4 +1,6 @@
 name: Update Google Scholar Citations
+permissions:
+  contents: write
 
 on:
   schedule:
@@ -14,7 +16,7 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      # See docs/CUSTOMIZE.md for details on how to set up PAT for triggering subsequent workflows
+      # Citation configuration is documented in docs/TEMPLATE.md.
       #        with:
       #          token: ${{ secrets.PAT }}
 

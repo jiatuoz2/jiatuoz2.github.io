@@ -1,21 +1,8 @@
 ---
-layout: academic
 permalink: /cv/
-title: cv
-nav: true
-nav_order: 4
-description: Curriculum vitae.
+title: Curriculum Vitae
 ---
 
-<section class="page-intro"><p class="eyebrow">Background / Curriculum vitae</p><h1>Research &amp; experience<span class="name-period">.</span></h1><p>My academic background, research experience, and publications.</p><a href="{{ '/assets/pdf/cv.pdf' | relative_url }}" class="button button-primary">Download CV (PDF) <span aria-hidden="true">↓</span></a></section>
-
-<iframe
-  src="{{ '/assets/pdf/cv.pdf' | relative_url }}"
-  title="Curriculum Vitae"
-  width="100%"
-  height="900"
-  class="cv-frame">
-  <p>Your browser does not support embedded PDFs.
-     <a href="{{ '/assets/pdf/cv.pdf' | relative_url }}">Download the CV here.</a></p>
-</iframe>
-<p class="cv-fallback">Prefer a separate window? <a href="{{ '/assets/pdf/cv.pdf' | relative_url }}">Open the CV directly ↗</a></p>
+<h1>Curriculum Vitae</h1>
+<p><a class="btn btn--primary" href="{{ site.author.cv | relative_url }}" download>Download CV (PDF)</a> · <a href="{{ site.author.cv | relative_url }}">Open in your browser</a></p>
+<iframe class="cv-frame" src="{{ site.author.cv | relative_url }}" title="Jiatuo Charlie Zou's curriculum vitae" width="100%" height="900"><p><a href="{{ site.author.cv | relative_url }}">Download the CV</a>.</p></iframe>

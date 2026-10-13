@@ -1,0 +1,3 @@
+# Keep generated files and Sass cache inside the container, off the Windows mount.
+sass:
+  cache_location: /tmp/jekyll-sass-cache

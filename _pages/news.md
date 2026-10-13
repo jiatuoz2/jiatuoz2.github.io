@@ -1,7 +1,5 @@
 ---
-layout: page
-title: news
 permalink: /news/
+layout: null
+redirect_to: /#news
 ---
-
-{% include news.liquid %}

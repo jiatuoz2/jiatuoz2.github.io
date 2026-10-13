@@ -1,7 +1,9 @@
 {
   "scripts": {
     "lint:prettier": "prettier . --check",
-    "lint:style-contract": "node test/style_contract.js",
+    "lint:template": "node test/template_contract.js",
+    "lint:style-contract": "npm run lint:template",
+    "test:cloth": "node test/cloth_physics.js && node test/scroll_physics.js",
     "test:visual": "playwright test --config test/visual/playwright.config.js",
     "test:visual:update": "playwright test --config test/visual/playwright.config.js --update-snapshots"
   },

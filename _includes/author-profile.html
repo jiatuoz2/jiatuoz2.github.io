@@ -1,0 +1,71 @@
+{% assign author = site.author %}
+<section class="profile-banner" data-profile-banner itemscope itemtype="https://schema.org/Person" aria-label="Profile and contact information">
+  <div
+    class="banner-scroll-grip"
+    data-scroll-grip
+    role="button"
+    tabindex="0"
+    aria-label="Roll up profile scroll"
+    aria-expanded="true"
+    aria-controls="profile-scroll"
+    hidden
+  ></div>
+  <div class="banner-rigging" aria-hidden="true">
+    <svg class="banner-hanger" viewBox="0 0 260 26" preserveAspectRatio="none" focusable="false">
+      <path class="banner-cord" d="M28 0C26 8 30 18 28 26" />
+      <path class="banner-cord" d="M232 0C234 8 230 18 232 26" />
+    </svg>
+    <span class="banner-rod"></span>
+  </div>
+  <div class="banner-viewport" data-scroll-viewport>
+    <div class="banner-cloth" data-banner-cloth>
+      <canvas class="banner-surface" data-cloth-canvas aria-hidden="true"></canvas>
+      <div class="banner-fabric" id="profile-scroll">
+        <svg class="banner-trim" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+          <path d="M4 2H96V90L50 98L4 90Z" />
+        </svg>
+        <div class="author__avatar">
+          <img src="{{ author.avatar | relative_url }}" alt="{{ author.name | escape }}" width="278" height="278" itemprop="image" />
+        </div>
+        <div class="banner-identity">
+          <h2 class="author__name" itemprop="name">{{ author.name }}</h2>
+          <p class="author__bio">{{ author.bio }}</p>
+          <p class="author__affiliation">{{ author.employer }}</p>
+          <p class="banner-location"><i class="fas fa-map-marker-alt" aria-hidden="true"></i> {{ author.location }}</p>
+        </div>
+        <ul class="banner-links" aria-label="Contact and academic profiles">
+          <li class="banner-email">
+            <a href="mailto:{{ author.email }}"
+              ><i class="fas fa-fw fa-envelope" aria-hidden="true"></i
+              ><span><span class="banner-link-label">Email</span><span class="banner-email-address">{{ author.email }}</span></span></a
+            >
+          </li>
+          <li>
+            <a href="{{ author.googlescholar }}"
+              ><i class="fas fa-fw fa-graduation-cap" aria-hidden="true"></i><span>Google Scholar</span
+              ><span class="banner-link-arrow" aria-hidden="true">↗</span></a
+            >
+          </li>
+          <li>
+            <a href="https://github.com/{{ author.github }}"
+              ><i class="fab fa-fw fa-github" aria-hidden="true"></i><span>GitHub</span><span class="banner-link-arrow" aria-hidden="true">↗</span></a
+            >
+          </li>
+          <li>
+            <a href="https://www.linkedin.com/in/{{ author.linkedin }}/"
+              ><i class="fab fa-fw fa-linkedin" aria-hidden="true"></i><span>LinkedIn</span
+              ><span class="banner-link-arrow" aria-hidden="true">↗</span></a
+            >
+          </li>
+          <li>
+            <a href="{{ author.cv | relative_url }}"
+              ><i class="fas fa-fw fa-file-pdf" aria-hidden="true"></i><span>Curriculum Vitae</span
+              ><span class="banner-link-arrow" aria-hidden="true">↗</span></a
+            >
+          </li>
+        </ul>
+        <span class="banner-monogram" aria-hidden="true">JZ</span>
+      </div>
+    </div>
+  </div>
+</section>

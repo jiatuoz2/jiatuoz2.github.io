@@ -1,0 +1,332 @@
+/* Native profile markup is the static fallback and accessible link surface. */
+.profile-banner {
+  position: relative;
+  width: 100%;
+  max-width: 260px;
+  margin: 0 auto 1.5em;
+  padding-top: 26px;
+  isolation: isolate;
+}
+.banner-rigging {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 32px;
+  z-index: 2;
+  pointer-events: none;
+}
+.banner-hanger {
+  position: absolute;
+  top: 0;
+  width: 100%;
+  height: 26px;
+}
+.banner-cord {
+  fill: none;
+  stroke: #786b54;
+  stroke-width: 1.6;
+  vector-effect: non-scaling-stroke;
+}
+.banner-rod {
+  position: absolute;
+  top: 22px;
+  left: -8px;
+  right: -8px;
+  height: 6px;
+  border-radius: 3px;
+}
+.banner-rod::before,
+.banner-rod::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  width: 12px;
+  height: 8px;
+  top: -1px;
+  border-radius: 4px;
+  background: linear-gradient(#bcaa7b, #776646 60%, #a29169);
+  box-shadow: 0 1px 2px #3429191a;
+}
+.banner-rod::before {
+  left: 0;
+}
+.banner-rod::after {
+  right: 0;
+}
+.banner-scroll-grip {
+  position: absolute;
+  top: 10px;
+  left: 0;
+  width: 100%;
+  height: 32px;
+  z-index: 3;
+  background: transparent;
+  cursor: grab;
+  touch-action: manipulation;
+}
+.banner-scroll-grip:active {
+  cursor: grabbing;
+}
+.banner-scroll-grip:focus-visible {
+  outline-offset: 1px;
+  border-radius: 10px;
+}
+.banner-viewport {
+  position: relative;
+  margin-top: -16px;
+  padding-top: 16px;
+  overflow: hidden;
+  // Preserve a little space for the cloth's shadow while it rolls into the sleeve.
+  margin-inline: -16px;
+  padding-inline: 16px;
+  cursor: grab;
+}
+.banner-cloth {
+  position: relative;
+  background: linear-gradient(100deg, #e8e5dd, #f5f2e9 22%, #ede9e0 60%, #f3efe5 85%, #e7e3da);
+  box-shadow: 2px 7px 9px #39302020;
+}
+.banner-cloth::before {
+  content: "";
+  position: absolute;
+  inset: 13px 8px 8px;
+  border: 0;
+  pointer-events: none;
+}
+.banner-surface {
+  display: none;
+  position: absolute;
+  top: -16px;
+  left: -16px;
+  width: calc(100% + 32px);
+  height: calc(100% + 32px);
+  pointer-events: none;
+  filter: drop-shadow(3px 8px 6px #33291a2b);
+}
+.cloth-rendered .banner-cloth {
+  background: none;
+  box-shadow: none;
+}
+.cloth-rendered .banner-cloth::before {
+  display: none;
+}
+.cloth-rendered .banner-surface {
+  display: block;
+}
+.cloth-rendered .banner-fabric {
+  opacity: 0;
+}
+.banner-fabric {
+  position: relative;
+  padding: 42px 26px 80px;
+  color: #374151;
+  text-align: center;
+}
+.profile-banner:not(.cloth-rendered) .banner-cloth {
+  clip-path: polygon(0 0, 100% 0, 100% 91%, 50% 100%, 0 91%);
+}
+.banner-trim {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: #bfa46380;
+  stroke-width: 1;
+  pointer-events: none;
+}
+.banner-trim path {
+  vector-effect: non-scaling-stroke;
+}
+.profile-banner .author__avatar {
+  display: block;
+  width: 128px;
+  height: 128px;
+  margin: 0 auto 19px;
+}
+.profile-banner .author__avatar img {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 3px;
+  padding: 0;
+  border: 1px solid #bfa46380;
+  box-shadow: none;
+}
+.profile-banner .author__name {
+  margin: 0 0 11px;
+  font-size: 1.25em;
+  line-height: 1.35;
+  color: #00274c;
+  font-family: "Newsreader", Georgia, serif;
+  font-weight: 700;
+}
+.profile-banner .author__bio,
+.profile-banner .author__affiliation {
+  color: #374151;
+  font-size: 0.9em;
+  line-height: 1.6;
+}
+.profile-banner .author__bio {
+  margin: 0 0 7px;
+}
+.profile-banner .author__affiliation {
+  margin: 0;
+}
+.profile-banner .banner-location {
+  margin: 10px 0 18px;
+  font-size: 0.83em;
+  color: #596273;
+}
+.banner-location i {
+  margin-right: 3px;
+}
+.profile-banner .banner-links {
+  margin: 0;
+  padding: 11px 0 0;
+  list-style: none;
+  border-top: 1px solid #c2a46a50;
+  text-align: left;
+}
+.profile-banner .banner-links li {
+  font-size: 0.9em;
+  line-height: 1.55;
+}
+.banner-links a {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 0;
+  color: #00274c;
+  text-decoration: none;
+  transition: none;
+}
+.banner-links a:hover {
+  color: #145d9c;
+}
+.banner-links a:hover > span:not(.banner-link-arrow) {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.banner-links a:focus-visible {
+  outline-color: #224b8d;
+  outline-offset: 3px;
+}
+.banner-links i {
+  flex: 0 0 14px;
+  color: #566d7e;
+  font-size: 0.95em;
+}
+.banner-link-arrow {
+  margin-left: auto;
+  color: #798793;
+  font:
+    13px Arial,
+    sans-serif;
+}
+.banner-link-label,
+.banner-email-address {
+  display: block;
+}
+.banner-email-address {
+  font-size: 0.9em;
+  color: #596273;
+  overflow-wrap: anywhere;
+}
+.banner-monogram {
+  display: block;
+  margin: 22px auto 0;
+  color: #647383;
+  opacity: 0.7;
+  font:
+    600 13px Georgia,
+    serif;
+  letter-spacing: 3px;
+  text-indent: 3px;
+  text-shadow: none;
+}
+
+@media (min-width: 925px) {
+  #main > .sidebar {
+    width: 260px;
+    margin-right: 0;
+  }
+  #main > .page {
+    width: calc(100% - 310px);
+    padding-left: 0;
+  }
+}
+@media (max-width: 924px) {
+  .profile-banner {
+    width: calc(100% - 32px);
+    max-width: 320px;
+    margin: 0 auto 2em;
+  }
+  .banner-fabric {
+    padding-inline: 30px;
+    padding-bottom: 85px;
+  }
+  .profile-banner .author__avatar {
+    width: 120px;
+    height: 120px;
+    margin-bottom: 15px;
+  }
+  .profile-banner .banner-links {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 16px;
+  }
+  .profile-banner .banner-email {
+    grid-column: 1 / -1;
+  }
+  .banner-link-arrow {
+    display: none;
+  }
+  .profile-banner .banner-links li {
+    font-size: 0.75em;
+  }
+}
+@media print {
+  .banner-rigging,
+  .banner-scroll-grip,
+  .banner-surface,
+  .banner-trim,
+  .banner-monogram {
+    display: none;
+  }
+  .profile-banner {
+    padding: 0;
+  }
+  .banner-viewport {
+    height: auto !important;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+  }
+  .banner-fabric {
+    padding: 0;
+    color: black;
+  }
+  .banner-cloth {
+    background: none;
+    box-shadow: none;
+    clip-path: none !important;
+  }
+  .banner-cloth::before {
+    display: none;
+  }
+  .cloth-rendered .banner-fabric {
+    opacity: 1;
+  }
+  .profile-banner .author__name,
+  .profile-banner .author__bio,
+  .profile-banner .author__affiliation,
+  .profile-banner .banner-location,
+  .banner-links a,
+  .banner-email-address {
+    color: black;
+  }
+}
