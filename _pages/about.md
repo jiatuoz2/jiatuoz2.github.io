@@ -11,11 +11,11 @@ I am Jiatuo "Charlie" Zou, a researcher in **Human-Computer Interaction (HCI)** 
 
 <h2 id="research-interests" class="research-heading">Research interests</h2>
 
-My work lies at the intersection of **extended reality (XR), wearable computing, multimodal AI, and novel sensing**. I think about these interests as a continuous loop: **sensing → sensemaking → interaction → new sensing**. Sensing captures signals, sensemaking understands those signals, and interaction uses that understanding to respond, producing new signals for the next cycle.
+I am interested in building **context-aware interaction systems** that adapt to users and their environments based on novel sensing and multimodal AI, with a specific focus on **extended reality (XR), wearable computing, and human-AI interaction (HAI)**. I envision approaching these problems through a **human-AI loop** that consists of three components: **sensing, sensemaking, and interaction**. Sensing captures signals, sensemaking understands those signals, and interaction uses that understanding to respond, producing new signals for the next cycle.
 
 <div class="research-overview">
 {% include research-cycle.html %}
-<ul class="research-themes" aria-label="Research interests across the sensing and interaction loop">
+<ul class="research-themes" aria-label="Research interests across the human-AI loop">
   <li>
     <h3>Sensing</h3>
     <p>I am interested in capturing behavioral, physiological, and environmental signals through wearables and novel sensing. These measurements provide the raw evidence for sensemaking, including cues that are difficult to convey through explicit input alone.</p>
