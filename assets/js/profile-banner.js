@@ -59,11 +59,8 @@
     context.closePath();
     context.clip();
     const fabric = context.createLinearGradient(0, 0, bounds.width, 0);
-    fabric.addColorStop(0, "#e8e5dd");
-    fabric.addColorStop(0.22, "#f5f2e9");
-    fabric.addColorStop(0.6, "#ede9e0");
-    fabric.addColorStop(0.85, "#f3efe5");
-    fabric.addColorStop(1, "#e7e3da");
+    const palette = getComputedStyle(banner);
+    [0, 0.22, 0.6, 0.85, 1].forEach((stop, i) => fabric.addColorStop(stop, palette.getPropertyValue(`--banner-cloth-${i}`).trim()));
     context.fillStyle = fabric;
     context.fillRect(0, 0, bounds.width, bounds.height);
     // Muted gold edging and a sewn top sleeve, lit with the same fabric mesh.
@@ -161,7 +158,7 @@
     if (hoveredLink) {
       const box = linkLayout.find((entry) => entry.link === hoveredLink);
       if (box) {
-        context.strokeStyle = "#224b8d80";
+        context.strokeStyle = palette.getPropertyValue("--banner-hover-rule").trim();
         context.lineWidth = 0.7;
         context.beginPath();
         context.moveTo(box.x + 23, box.y + box.height - 4);
@@ -172,13 +169,23 @@
     context.restore();
     renderer.setTexture(print);
   }
+  function reprint() {
+    // Reset only the click-target transforms while measuring the print texture.
+    const transforms = links.map((link) => link.style.transform);
+    links.forEach((link) => link.style.removeProperty("transform"));
+    buildPrint();
+    links.forEach((link, i) => {
+      link.style.transform = transforms[i];
+    });
+  }
 
   function render() {
     if (!simulation) return;
     renderer.render(simulation);
     banner.dataset.clothRenderer = renderer.software ? "canvas" : "webgl";
     // Move the native click targets with the printed cloth, without replacing links.
-    for (const box of linkLayout) {
+    // Keyboard focus shows the stationary native profile, so its links stay in place.
+    for (const box of keyboardFocus ? [] : linkLayout) {
       const x = box.x + box.width / 2;
       const y = box.y + box.height / 2;
       const projected = renderer.project(simulation, x, y);
@@ -379,13 +386,7 @@
     const link = event.target.closest("a");
     if (hoveredLink !== link) {
       hoveredLink = link;
-      // Reset only the click-target transforms while measuring the print texture.
-      const transforms = links.map((anchor) => anchor.style.transform);
-      links.forEach((anchor) => anchor.style.removeProperty("transform"));
-      buildPrint();
-      links.forEach((anchor, i) => {
-        anchor.style.transform = transforms[i];
-      });
+      reprint();
     }
     settleAge = 0;
     state("hover");
@@ -397,12 +398,7 @@
     pointer.active = false;
     if (hoveredLink) {
       hoveredLink = null;
-      const transforms = links.map((link) => link.style.transform);
-      links.forEach((link) => link.style.removeProperty("transform"));
-      buildPrint();
-      links.forEach((link, i) => {
-        link.style.transform = transforms[i];
-      });
+      reprint();
     }
     if (canAnimate()) {
       settleAge = 0;
@@ -429,11 +425,18 @@
       if (!banner.contains(document.activeElement)) {
         keyboardFocus = false;
         banner.classList.add("cloth-rendered");
+        render();
         state(canAnimate() ? "idle" : "paused");
         nextGust();
       }
     })
   );
+  // The print is a texture, so a theme change has to dye the fabric again.
+  document.addEventListener("site-theme-change", () => {
+    if (!ready) return;
+    reprint();
+    render();
+  });
   reducedMotion.addEventListener("change", () => {
     if (rollFrame !== null) finishRoll();
     rest();

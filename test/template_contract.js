@@ -12,6 +12,7 @@ assert(/gem "jekyll", "~> 3\.10"/.test(gemfile), "Use AcadHomepage's native Jeky
 for (const path of [
   "_layouts/default.html",
   "_sass/_variables.scss",
+  "_sass/_theme.scss",
   "_sass/vendor/breakpoint/_breakpoint.scss",
   "_sass/vendor/susy/_susy.scss",
   "_sass/vendor/susy/susy/output/_float.scss",

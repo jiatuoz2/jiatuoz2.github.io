@@ -1,0 +1,313 @@
+/* Day/night switch and the night palette. Day styles stay in their own partials;
+   night only overrides them, and only on screen so printing always stays light. */
+$night-page: #10171f;
+$night-surface: #1a2430;
+$night-raised: #263343;
+$night-rule: #2e3b4a;
+$night-text: #cdd5de;
+$night-muted: #9aa7b5;
+$night-heading: #e8eef5;
+$night-link: #a8cdf2;
+$night-link-hover: #d3e6fa;
+$night-focus: #8fc0f5;
+$night-gold: #d6bc72;
+
+// The template transitions "all" on text, so colors read during a switch or while
+// loading would be stale, and the banner would print them into its texture.
+.theme-switching *:not(.theme-toggle__thumb) {
+  transition: none !important;
+}
+.masthead__inner-wrap {
+  display: flex;
+  align-items: center;
+}
+.masthead__menu {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+// Narrower than the template's 250px so the menu button can't cover the switch on
+// fold-sized screens. The template's updateNav only terminates while the nav stays
+// wider than its button plus 30px, so this must never go down to zero.
+.masthead .greedy-nav {
+  min-width: 100px;
+}
+.theme-toggle {
+  position: relative;
+  flex: none;
+  width: 44px;
+  height: 40px;
+  // A full-size tap target that doesn't make the masthead any taller.
+  margin: -6px 0 -6px 0.5rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #8a6d0f;
+  cursor: pointer;
+}
+.theme-toggle::before {
+  content: "";
+  position: absolute;
+  top: 8px;
+  left: 0;
+  width: 44px;
+  height: 24px;
+  border: 1px solid #ccd6df;
+  border-radius: 12px;
+  background: #edf2f6;
+}
+.theme-toggle__thumb {
+  position: absolute;
+  top: 11px;
+  left: 3px;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px #00274c40;
+  transition: transform 0.2s ease-in-out;
+}
+.theme-toggle svg {
+  display: block;
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+.theme-toggle .theme-toggle__moon {
+  display: none;
+}
+.no-js .theme-toggle {
+  display: none;
+}
+
+@media screen {
+  html[data-theme="dark"] {
+    color-scheme: dark;
+    background-color: $night-page;
+
+    --banner-cloth-0: #1b2733;
+    --banner-cloth-1: #25323f;
+    --banner-cloth-2: #202c39;
+    --banner-cloth-3: #243140;
+    --banner-cloth-4: #1b2733;
+    --banner-hover-rule: #8fc0f580;
+
+    body {
+      color: $night-text;
+    }
+    a {
+      color: $night-link;
+    }
+    :focus-visible {
+      outline-color: $night-focus;
+    }
+    .skip-link {
+      background: $night-surface;
+      border-color: $night-focus;
+    }
+
+    .theme-toggle {
+      color: #ffcb05;
+    }
+    .theme-toggle::before {
+      border-color: $night-rule;
+      background: $night-raised;
+    }
+    .theme-toggle__thumb {
+      background: $night-page;
+      box-shadow: none;
+      transform: translateX(20px);
+    }
+    .theme-toggle .theme-toggle__sun {
+      display: none;
+    }
+    .theme-toggle .theme-toggle__moon {
+      display: block;
+    }
+
+    .masthead {
+      background-color: $night-page;
+      border-bottom-color: $night-rule;
+    }
+    .greedy-nav {
+      background: $night-page;
+    }
+    .masthead .greedy-nav a {
+      color: $night-heading;
+    }
+    .masthead .greedy-nav a:hover {
+      color: $night-link-hover;
+    }
+    .greedy-nav .hidden-links {
+      border-color: $night-rule;
+      background: $night-surface;
+    }
+    .greedy-nav .hidden-links::before {
+      border-color: $night-rule transparent;
+    }
+    .greedy-nav .hidden-links::after {
+      border-color: $night-surface transparent;
+    }
+    .greedy-nav .hidden-links li {
+      border-color: $night-rule;
+    }
+    .greedy-nav .hidden-links a:hover {
+      background: $night-raised;
+    }
+
+    .page__content {
+      color: $night-text;
+    }
+    .page__content h1,
+    .page__content h2,
+    .page__content h3 {
+      color: $night-heading;
+    }
+    .page__content > h1,
+    .page__content > .section-heading {
+      border-bottom-color: $night-rule;
+    }
+    .page__content a {
+      color: $night-link;
+      text-decoration-color: #4d6680;
+    }
+    .page__content a:hover {
+      color: $night-link-hover;
+      text-decoration-color: currentColor;
+    }
+
+    .research-cycle-paths path {
+      stroke: $night-gold;
+    }
+    #research-cycle-arrow path {
+      stroke: $night-gold;
+    }
+    .research-cycle-node--sensing ellipse {
+      fill: #17302c;
+      stroke: #2f5a50;
+    }
+    .research-cycle-node--sensemaking ellipse {
+      fill: #182a40;
+      stroke: #33506f;
+    }
+    .research-cycle-node--interaction ellipse {
+      fill: #2e2813;
+      stroke: #665a2a;
+    }
+    .research-cycle-phase {
+      fill: $night-heading;
+    }
+    .research-cycle-caption {
+      fill: $night-text;
+    }
+    .research-cycle-center circle {
+      fill: $night-page;
+      stroke: #3a4856;
+    }
+    .research-cycle-center text,
+    .research-cycle-flow {
+      fill: $night-muted;
+    }
+    .research-cycle-return {
+      fill: $night-gold;
+    }
+    .research-cycle figcaption {
+      color: $night-muted;
+    }
+
+    .news-list time {
+      color: $night-heading;
+    }
+    .publication-search {
+      border-color: $night-rule;
+      color: $night-muted;
+      background: $night-surface;
+    }
+    .publication-search:focus-within {
+      border-color: $night-focus;
+      box-shadow: 0 0 0 2px #8fc0f526;
+    }
+    .publication-search input {
+      color: $night-heading;
+    }
+    .publication-search input::placeholder {
+      color: $night-muted;
+    }
+    .publication-search-clear {
+      background: $night-raised;
+      color: $night-heading;
+    }
+    .page__content .publication-search-status,
+    .paper-authors,
+    .paper-annotation {
+      color: $night-muted;
+    }
+    .paper-authors .paper-author-self {
+      color: $night-heading;
+    }
+    .paper-box {
+      border-color: $night-rule;
+    }
+    .paper-box .paper-box-image img {
+      background: $night-surface;
+      box-shadow: 0 2px 8px #0006;
+    }
+    .paper-abstract summary {
+      color: $night-link;
+    }
+    .cv-frame {
+      border-color: $night-rule;
+    }
+    .btn {
+      background-color: $night-raised;
+    }
+    .btn:hover {
+      background-color: #34465b;
+    }
+
+    .site-footer {
+      border-top-color: $night-rule;
+      color: $night-muted;
+    }
+    .research-video-dialog {
+      border-color: $night-rule;
+      background: $night-surface;
+      color: $night-text;
+    }
+    .video-close {
+      background: $night-raised;
+      border-color: $night-rule;
+      color: $night-heading;
+    }
+
+    .profile-banner:not(.cloth-rendered) .banner-cloth {
+      box-shadow: 2px 7px 9px #0008;
+    }
+    .banner-surface {
+      filter: drop-shadow(3px 8px 6px #0008);
+    }
+    .banner-fabric,
+    .profile-banner .author__bio,
+    .profile-banner .author__affiliation {
+      color: $night-text;
+    }
+    .profile-banner .author__name,
+    .banner-links a {
+      color: $night-heading;
+    }
+    .banner-links a:hover {
+      color: $night-link-hover;
+    }
+    .profile-banner .banner-location,
+    .banner-links i,
+    .banner-link-arrow,
+    .banner-email-address,
+    .banner-monogram {
+      color: $night-muted;
+    }
+    .banner-links a:focus-visible {
+      outline-color: $night-focus;
+    }
+  }
+}

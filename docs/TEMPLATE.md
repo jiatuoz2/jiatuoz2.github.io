@@ -84,6 +84,18 @@ the profile banner. Cascade says "Submitted to CHI 2027; under review."
 The extra equal-contribution/Scholar/archive line above the list was removed;
 OLIVE's own equal-contribution annotation remains with the paper.
 
+A day/night switch sits at the right of the masthead. A visitor's choice is saved in
+localStorage as site-theme; until they choose, the site follows their system setting.
+An inline script in \_includes/head.html sets data-theme on the html element before the
+stylesheet loads, avoiding a flash of the wrong theme. \_sass/\_theme.scss holds the
+switch and the night palette, which only overrides day styles and applies to screens,
+so printing stays light; the native profile prints instead of the banner canvas.
+Add a night override there when adding a new color elsewhere.
+assets/js/site.js fires site-theme-change, and the banner reprints its texture from the
+--banner-cloth-\* variables in \_sass/\_profile-banner.scss. Without JavaScript the site
+stays in day mode and the switch is hidden. Text transitions are disabled while the
+theme-switching class is set, so colors read for that print are never mid-fade.
+
 \_sass/\_site.scss contains small layout/accessibility adaptations and paper controls.
 assets/js/site.js provides video dialogs and menu ARIA
 state. Native links, abstracts, profile contacts, and page navigation work without

@@ -1,4 +1,54 @@
 (() => {
+  const root = document.documentElement;
+  const themeToggle = document.querySelector("[data-theme-toggle]");
+  const themeColor = document.querySelector('meta[name="theme-color"]');
+  const systemDark = matchMedia("(prefers-color-scheme: dark)");
+  const systemTheme = () => (systemDark.matches ? "dark" : "light");
+  // Storage can be blocked; the switch then still works for the current page.
+  const savedTheme = () => {
+    try {
+      const theme = localStorage.getItem("site-theme");
+      return theme === "dark" || theme === "light" ? theme : null;
+    } catch {
+      return null;
+    }
+  };
+  let themeFrame = null;
+  const settleTheme = () => {
+    if (themeFrame !== null) cancelAnimationFrame(themeFrame);
+    themeFrame = requestAnimationFrame(() => {
+      themeFrame = requestAnimationFrame(() => {
+        themeFrame = null;
+        root.classList.remove("theme-switching");
+      });
+    });
+  };
+  const applyTheme = (theme) => {
+    const changed = root.dataset.theme !== theme;
+    root.classList.add("theme-switching");
+    root.dataset.theme = theme;
+    themeToggle?.setAttribute("aria-checked", String(theme === "dark"));
+    if (themeToggle) themeToggle.title = theme === "dark" ? "Switch to day mode" : "Switch to night mode";
+    if (themeColor) themeColor.content = getComputedStyle(root).backgroundColor;
+    if (changed) document.dispatchEvent(new Event("site-theme-change"));
+    settleTheme();
+  };
+  themeToggle?.addEventListener("click", () => {
+    const theme = root.dataset.theme === "dark" ? "light" : "dark";
+    try {
+      localStorage.setItem("site-theme", theme);
+    } catch {}
+    applyTheme(theme);
+  });
+  // Follow the system until the visitor chooses, and keep open tabs in step.
+  systemDark.addEventListener("change", () => {
+    if (!savedTheme()) applyTheme(systemTheme());
+  });
+  window.addEventListener("storage", (event) => {
+    if (event.key === "site-theme" || event.key === null) applyTheme(savedTheme() || systemTheme());
+  });
+  applyTheme(root.dataset.theme);
+
   const navigation = document.querySelector(".greedy-nav");
   const menu = navigation?.querySelector("button");
   const overflow = navigation?.querySelector(".hidden-links");

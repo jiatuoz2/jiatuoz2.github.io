@@ -8,6 +8,16 @@
 
 <script>
   document.documentElement.className = document.documentElement.className.replace(/\bno-js\b/g, "") + " js ";
+  // Runs before the stylesheet so a night-mode page never flashes white.
+  (() => {
+    let theme = null;
+    try {
+      theme = localStorage.getItem("site-theme");
+    } catch {}
+    if (theme !== "dark" && theme !== "light") theme = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.classList.add("theme-switching");
+  })();
 </script>
 
 <!-- For all browsers -->

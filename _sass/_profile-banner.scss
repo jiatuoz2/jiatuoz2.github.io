@@ -7,6 +7,15 @@
   padding-top: 26px;
   isolation: isolate;
 }
+// assets/js/profile-banner.js prints the fabric into its texture from these.
+:root {
+  --banner-cloth-0: #e8e5dd;
+  --banner-cloth-1: #f5f2e9;
+  --banner-cloth-2: #ede9e0;
+  --banner-cloth-3: #f3efe5;
+  --banner-cloth-4: #e7e3da;
+  --banner-hover-rule: #224b8d80;
+}
 .banner-rigging {
   position: absolute;
   inset: 0 0 auto;
@@ -82,7 +91,14 @@
 }
 .banner-cloth {
   position: relative;
-  background: linear-gradient(100deg, #e8e5dd, #f5f2e9 22%, #ede9e0 60%, #f3efe5 85%, #e7e3da);
+  background: linear-gradient(
+    100deg,
+    var(--banner-cloth-0),
+    var(--banner-cloth-1) 22%,
+    var(--banner-cloth-2) 60%,
+    var(--banner-cloth-3) 85%,
+    var(--banner-cloth-4)
+  );
   box-shadow: 2px 7px 9px #39302020;
 }
 .banner-cloth::before {
@@ -320,6 +336,13 @@
   }
   .cloth-rendered .banner-fabric {
     opacity: 1;
+  }
+  // The native profile prints instead of the canvas, whose pixels keep the screen theme.
+  .cloth-rendered .banner-surface {
+    display: none;
+  }
+  .banner-links a {
+    transform: none !important;
   }
   .profile-banner .author__name,
   .profile-banner .author__bio,
