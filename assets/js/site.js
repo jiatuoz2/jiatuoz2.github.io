@@ -170,3 +170,14 @@
     opener?.focus();
   });
 })();
+
+// The masthead's links glide to their sections (the theme's jQuery smooth scroll); with
+// reduced motion they jump straight there instead.
+(() => {
+  const jq = window.jQuery;
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)");
+  if (typeof jq !== "function" || typeof jq.smoothScroll !== "function") return;
+  const apply = () => jq.smoothScroll("options", { speed: reduced.matches ? 0 : 400 });
+  apply();
+  reduced.addEventListener?.("change", apply);
+})();
