@@ -1,0 +1,257 @@
+/* Standalone "applying to PhD programs" announcement above About Me. Colors are
+   custom properties so night mode only swaps the palette. */
+.phd-callout {
+  --phd-callout-bg: linear-gradient(118deg, #fdfaf1 0%, #f6f8fb 58%, #eef3f9 100%);
+  --phd-callout-border: #dde4ec;
+  --phd-callout-accent: #ffcb05;
+  --phd-callout-shadow: 0 1px 2px #00274c0f, 0 10px 24px -14px #00274c4d;
+  --phd-callout-kicker: #00274c;
+  --phd-callout-text: #374151;
+  --phd-callout-strong: #00274c;
+  --phd-callout-dot: #2f9466;
+  --phd-callout-ring: #2f946673;
+  --phd-callout-button-bg: #00274c;
+  --phd-callout-button-text: #fff;
+  --phd-callout-button-hover: #134a7f;
+  --phd-callout-link-border: #b9c7d6;
+  --phd-callout-link-text: #00274c;
+  --phd-callout-link-hover: #e6edf5;
+
+  position: relative;
+  margin: 0 0 2.1em;
+  padding: 1.05em 1.35em 1.15em 1.6em;
+  border: 1px solid var(--phd-callout-border);
+  border-radius: 6px;
+  background: var(--phd-callout-bg);
+  box-shadow: var(--phd-callout-shadow);
+  overflow: hidden;
+}
+// Gold accent edge, drawn inside the box so it follows the rounded corners.
+.phd-callout::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 4px;
+  background: var(--phd-callout-accent);
+}
+
+.page__content .phd-callout p {
+  margin: 0;
+}
+.page__content .phd-callout .phd-callout-kicker {
+  margin-bottom: 0.75em;
+  padding-right: 1.4em;
+  font-family: "Trebuchet MS", Helvetica, sans-serif;
+  font-size: 0.72em;
+  font-weight: 700;
+  line-height: 1.45;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--phd-callout-kicker);
+  text-wrap: balance;
+}
+// A mortarboard glyph tinted with the kicker color, so it holds in both themes.
+.phd-callout-icon {
+  display: inline-block;
+  width: 1.55em;
+  height: 1.55em;
+  margin-right: 0.25em;
+  vertical-align: -0.45em;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 9.5 12 5l10 4.5-10 4.5z'/%3E%3Cpath d='M6 11.6V16c0 1.6 2.7 3 6 3s6-1.4 6-3v-4.4M22 9.5V15'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 9.5 12 5l10 4.5-10 4.5z'/%3E%3Cpath d='M6 11.6V16c0 1.6 2.7 3 6 3s6-1.4 6-3v-4.4M22 9.5V15'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+// A softly pulsing "open" status light in the corner.
+.phd-callout::after {
+  content: "";
+  position: absolute;
+  top: 1.3em;
+  right: 1.15em;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--phd-callout-dot);
+  box-shadow: 0 0 0 0 var(--phd-callout-ring);
+  // Two pulses on load, then a steady light (no endless motion beside the text).
+  animation: phd-callout-pulse 2.6s ease-out 2;
+}
+@keyframes phd-callout-pulse {
+  0% {
+    box-shadow: 0 0 0 0 var(--phd-callout-ring);
+  }
+  70%,
+  100% {
+    box-shadow: 0 0 0 7px transparent;
+  }
+}
+
+.page__content .phd-callout .phd-callout-text {
+  color: var(--phd-callout-text);
+  line-height: 1.55;
+}
+.phd-callout-text strong {
+  color: var(--phd-callout-strong);
+}
+
+.page__content .phd-callout .phd-callout-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6em;
+  margin-top: 0.95em;
+}
+.page__content .phd-callout a.phd-callout-button,
+.page__content .phd-callout a.phd-callout-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
+  box-sizing: border-box;
+  min-height: 40px;
+  padding: 0 1.05em;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  font-family: "Trebuchet MS", Helvetica, sans-serif;
+  font-size: 0.8em;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+// Small envelope and document glyphs, tinted with the text color.
+.page__content .phd-callout a.phd-callout-button::before,
+.page__content .phd-callout a.phd-callout-link::before {
+  content: "";
+  flex: none;
+  width: 1.05em;
+  height: 1.05em;
+  background: currentColor;
+  -webkit-mask: center / contain no-repeat;
+  mask: center / contain no-repeat;
+}
+.page__content .phd-callout a.phd-callout-button::before {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linejoin='round'%3E%3Crect x='3' y='5' width='18' height='14' rx='2'/%3E%3Cpath d='m3.5 6.5 8.5 7 8.5-7'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linejoin='round'%3E%3Crect x='3' y='5' width='18' height='14' rx='2'/%3E%3Cpath d='m3.5 6.5 8.5 7 8.5-7'/%3E%3C/svg%3E");
+}
+.page__content .phd-callout a.phd-callout-link::before {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linejoin='round'%3E%3Cpath d='M6 3h8l4 4v14H6z'/%3E%3Cpath d='M14 3v4h4M9 12h6M9 16h6'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linejoin='round'%3E%3Cpath d='M6 3h8l4 4v14H6z'/%3E%3Cpath d='M14 3v4h4M9 12h6M9 16h6'/%3E%3C/svg%3E");
+}
+.page__content .phd-callout a.phd-callout-button {
+  border-color: var(--phd-callout-button-bg);
+  background: var(--phd-callout-button-bg);
+  color: var(--phd-callout-button-text);
+  box-shadow: 0 1px 2px #00274c33;
+}
+.page__content .phd-callout a.phd-callout-button:hover {
+  border-color: var(--phd-callout-button-hover);
+  background: var(--phd-callout-button-hover);
+  color: var(--phd-callout-button-text);
+}
+.page__content .phd-callout a.phd-callout-link {
+  border-color: var(--phd-callout-link-border);
+  background: transparent;
+  color: var(--phd-callout-link-text);
+}
+.page__content .phd-callout a.phd-callout-link:hover {
+  border-color: var(--phd-callout-link-text);
+  background: var(--phd-callout-link-hover);
+  color: var(--phd-callout-link-text);
+}
+// The theme's orange focus ring is about 2:1 here; navy holds 3:1 on the light card.
+.page__content .phd-callout a.phd-callout-button:focus-visible,
+.page__content .phd-callout a.phd-callout-link:focus-visible {
+  outline: 2px solid #224b8d;
+  outline-offset: 2px;
+}
+
+// Wide content columns: text on the left, actions on the right.
+@media (min-width: 1280px) {
+  .phd-callout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 1.75em;
+    align-items: center;
+  }
+  .page__content .phd-callout .phd-callout-kicker {
+    grid-column: 1 / -1;
+  }
+  .page__content .phd-callout .phd-callout-actions {
+    margin-top: 0;
+  }
+}
+// Comfortable touch targets on phones and tablets.
+@media (max-width: 767px) {
+  .phd-callout {
+    padding: 0.95em 1em 1.05em 1.25em;
+  }
+  .page__content .phd-callout a.phd-callout-button,
+  .page__content .phd-callout a.phd-callout-link {
+    min-height: 44px;
+    flex: 1 1 auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .phd-callout::after {
+    animation: none;
+  }
+}
+
+@media print {
+  .phd-callout {
+    border: 1px solid #888;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    break-inside: avoid;
+  }
+  .phd-callout::before,
+  .phd-callout::after,
+  .page__content .phd-callout a.phd-callout-button::before,
+  .page__content .phd-callout a.phd-callout-link::before {
+    display: none;
+  }
+  .page__content .phd-callout a.phd-callout-button,
+  .page__content .phd-callout a.phd-callout-link {
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: #000;
+    box-shadow: none;
+    text-decoration: underline;
+  }
+}
+
+@media screen {
+  html[data-theme="dark"] {
+    .phd-callout {
+      --phd-callout-bg: linear-gradient(118deg, #1f2833 0%, #1a2430 55%, #192637 100%);
+      --phd-callout-border: #2e3b4a;
+      --phd-callout-accent: #d6bc72;
+      --phd-callout-shadow: 0 1px 2px #0000004d, 0 12px 26px -16px #000000b3;
+      --phd-callout-kicker: #e8eef5;
+      --phd-callout-text: #cdd5de;
+      --phd-callout-strong: #e8eef5;
+      --phd-callout-dot: #5cc493;
+      --phd-callout-ring: #5cc49366;
+      --phd-callout-button-bg: #a8cdf2;
+      --phd-callout-button-text: #10171f;
+      --phd-callout-button-hover: #d3e6fa;
+      --phd-callout-link-border: #3d4f63;
+      --phd-callout-link-text: #a8cdf2;
+      --phd-callout-link-hover: #263343;
+    }
+    .page__content .phd-callout a.phd-callout-button {
+      box-shadow: none;
+    }
+    .page__content .phd-callout a.phd-callout-button:focus-visible,
+    .page__content .phd-callout a.phd-callout-link:focus-visible {
+      outline-color: #8fc0f5;
+    }
+  }
+}

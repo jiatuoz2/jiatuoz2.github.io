@@ -1,0 +1,73 @@
+{% comment %} "My Journey": the Map pane of the section's split view (_includes/journey.html; assets/js/journey.js runs the split,
+assets/js/journey-map.js the globe; styles in _sass/_journey-map.scss and _sass/_journey-layout.scss). The pane stays hidden without JavaScript, and
+the globe inside it until the script finds WebGL; the map library and its tiles load as the section nears the viewport. The live day/night readout,
+the hint and the zoom buttons sit inside the frame. The pane keeps one size beside the board; "Expand map" opens the same live map in a window
+(.journey-map-window, a modal dialog over the dimmed page) and "Close map", Escape or a click outside puts it back. {% endcomment %}
+<section class="journey-pane journey-pane--map" id="journey-pane-map" data-journey-pane="map" aria-labelledby="journey-pane-map-label" hidden>
+  <div class="journey-pane-bar">
+    <p class="journey-pane-label" id="journey-pane-map-label">Map</p>
+    <button type="button" class="journey-pane-expand" data-journey-map-open aria-haspopup="dialog" aria-controls="journey-map-window">
+      <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M9.5 2.5h4v4M13.5 2.5 9 7M6.5 13.5h-4v-4M2.5 13.5 7 9" /></svg>
+      <span>Expand map</span>
+    </button>
+  </div>
+  <div class="journey-pane-body">
+    <figure
+      class="journey-map-figure"
+      data-journey-map
+      data-map-script="{{ '/assets/vendor/maplibre-gl/maplibre-gl.js' | relative_url }}"
+      data-map-style="{{ '/assets/vendor/maplibre-gl/maplibre-gl.css' | relative_url }}"
+      data-map-tiles="{{ '/assets/data/journey-map' | relative_url }}"
+      hidden
+    >
+      <div class="journey-map-frame">
+        <div class="journey-map-halo" data-map-halo aria-hidden="true" hidden></div>
+        <div class="journey-map-canvas" data-map-canvas></div>
+        <div class="journey-map-pins" data-map-pins></div>
+        <p class="journey-map-loading" data-map-loading>Loading the map…</p>
+        <p class="journey-map-clock" data-map-clock hidden>
+          <span class="journey-map-clock-icon" aria-hidden="true"></span>
+          <span class="journey-map-clock-text">
+            <span class="journey-map-clock-line"><strong data-clock-place></strong> <span data-clock-time></span></span>
+            <span class="journey-map-clock-line journey-map-clock-meta"
+              ><span data-clock-phase></span><span aria-hidden="true"> · </span><span class="journey-map-clock-mode" data-clock-mode></span
+            ></span>
+          </span>
+        </p>
+        <div class="journey-map-controls" role="group" aria-label="Map view">
+          <button type="button" data-map-zoom="in" aria-label="Zoom in">
+            <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M8 3v10M3 8h10" /></svg>
+          </button>
+          <button type="button" data-map-zoom="out" aria-label="Zoom out">
+            <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3 8h10" /></svg>
+          </button>
+          <button type="button" data-map-zoom="reset" aria-label="Show the whole globe">
+            <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+              <circle cx="8" cy="8" r="5.5" />
+              <path d="M2.5 8h11M8 2.5c-2.2 2.9-2.2 8.1 0 11M8 2.5c2.2 2.9 2.2 8.1 0 11" />
+            </svg>
+          </button>
+        </div>
+        <p class="journey-map-hint" data-map-hint aria-hidden="true">Drag to turn the globe; pick a pin to fly there.</p>
+      </div>
+      <p class="visually-hidden" aria-live="polite" data-journey-status></p>
+      <figcaption class="visually-hidden" id="journey-map-caption">
+        Map: a globe lit by the sun as it is right now, with a pin for each stop on my route, joined in order.
+        <span id="journey-map-keys">Arrow keys move the map, plus and minus zoom, and 0 returns to the whole globe.</span>
+      </figcaption>
+    </figure>
+    <p class="journey-map-away" data-journey-map-away hidden>The map is open in a window.</p>
+  </div>
+  <dialog class="journey-map-window" id="journey-map-window" role="dialog" aria-modal="true" aria-label="Map" data-journey-map-window>
+    <div class="journey-map-window-frame">
+      <div class="journey-map-window-bar">
+        <p class="journey-map-window-title" aria-hidden="true">Map</p>
+        <button type="button" class="journey-map-window-close" data-journey-map-close>
+          <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9" /></svg>
+          <span>Close map</span>
+        </button>
+      </div>
+      <div class="journey-map-window-body" data-journey-map-window-body></div>
+    </div>
+  </dialog>
+</section>

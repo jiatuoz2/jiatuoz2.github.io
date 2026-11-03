@@ -1,0 +1,749 @@
+/* "My Journey" map (_includes/journey-map.html, assets/js/journey-map.js). The map itself
+   is a MapLibre GL canvas whose colors are set in the script; this partial styles the frame,
+   pins, label, readout, hint and zoom buttons, all inside the frame, and the map window that
+   "Expand map" opens. The map fills the Map pane of the section's split view; the panes, the
+   timeline strip and the section's layout are in _journey-layout.scss. Night overrides sit at
+   the bottom (the documented exception to the _theme.scss rule). */
+$map-ui: "Trebuchet MS", Helvetica, sans-serif;
+$map-stars: url("../data/journey-map/starfield.png");
+
+// The Map pane is deep space in both themes, so the map's own controls are light-on-dark.
+.journey-pane--map {
+  --map-frame-border: rgba(255, 255, 255, 0.12);
+  --map-frame-shadow: 0 1px 2px rgba(0, 0, 0, 0.45), 0 14px 30px -16px rgba(0, 0, 0, 0.9);
+  // Deep space with two faint nebulae.
+  --map-space:
+    radial-gradient(ellipse 55% 42% at 84% 16%, rgba(104, 72, 178, 0.2), transparent 70%),
+    radial-gradient(ellipse 48% 40% at 10% 90%, rgba(24, 96, 168, 0.18), transparent 70%),
+    radial-gradient(ellipse 85% 80% at 50% 50%, #0b162c 0%, #050a18 55%, #010309 100%);
+  --map-text: #eef3f8;
+  --map-muted: #a9b6c4;
+  --map-control-bg: rgba(6, 12, 24, 0.66);
+  --map-control-border: rgba(255, 255, 255, 0.22);
+  --map-control-hover: rgba(30, 44, 66, 0.9);
+  --map-control-hover-border: rgba(255, 220, 160, 0.6);
+  --map-focus: #8fc0f5;
+  --map-pin: #ffffff;
+  --map-pin-ring: #00274c;
+  --map-pin-selected: #e8402c;
+  --map-pin-current: #e3b64a;
+  --map-label-bg: rgba(8, 14, 28, 0.8);
+  --map-label-text: #f4f7fb;
+  --map-label-muted: #b4c1d0;
+}
+
+/* ---------- the map ---------- */
+// The theme lays figures out as flex rows; this one is a plain block, hidden until
+// the script has found WebGL.
+.journey-map-figure {
+  display: block;
+  margin: 0;
+}
+.journey-map-figure[hidden] {
+  display: none;
+}
+
+/* The frame: deep space. Square by default; in the Map pane it fills the pane (see
+   _journey-layout.scss). */
+.journey-map-frame {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border: 1px solid var(--map-frame-border);
+  border-radius: 14px;
+  background-color: #02040a;
+  background-image: var(--map-space);
+  box-shadow: var(--map-frame-shadow);
+  isolation: isolate;
+}
+// Two layers of the same stars at different scales drift at different rates as the globe
+// turns (the script sets --stars-x/y).
+.journey-map-frame::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: $map-stars, $map-stars;
+  background-size:
+    512px 512px,
+    300px 300px;
+  background-position:
+    var(--stars-x, 0px) var(--stars-y, 0px),
+    calc(var(--stars-x, 0px) * 0.45 + 140px) calc(var(--stars-y, 0px) * 0.45 + 90px);
+  pointer-events: none;
+}
+// A lens vignette over the picture, under the pins and readout.
+.journey-map-frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  box-shadow:
+    inset 0 0 90px rgba(0, 0, 0, 0.42),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  pointer-events: none;
+}
+
+/* The atmosphere's glow beyond the limb: a thin blue ring, and a brighter crescent on the
+   side facing the sun (wider when the sun is behind the globe). The script sets the
+   centre, radius and sun direction. */
+.journey-map-halo {
+  --halo-ring: radial-gradient(
+    circle at var(--halo-x, 50%) var(--halo-y, 50%),
+    transparent calc(var(--halo-r, 0px) - 3px),
+    rgba(110, 175, 255, 0.42) calc(var(--halo-r, 0px) + 1px),
+    rgba(70, 130, 255, 0.2) calc(var(--halo-r, 0px) * 1.035 + 3px),
+    rgba(40, 90, 220, 0.07) calc(var(--halo-r, 0px) * 1.11 + 6px),
+    transparent calc(var(--halo-r, 0px) * 1.3 + 12px)
+  );
+  position: absolute;
+  inset: 0;
+  background: var(--halo-ring);
+  pointer-events: none;
+}
+.journey-map-halo::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at var(--halo-x, 50%) var(--halo-y, 50%),
+    transparent calc(var(--halo-r, 0px) - 3px),
+    rgba(214, 236, 255, 0.95) calc(var(--halo-r, 0px) + 0.5px),
+    rgba(120, 190, 255, 0.5) calc(var(--halo-r, 0px) * 1.02 + 3px),
+    rgba(80, 140, 255, 0.16) calc(var(--halo-r, 0px) * 1.08 + 6px),
+    transparent calc(var(--halo-r, 0px) * 1.24 + 12px)
+  );
+  -webkit-mask-image: conic-gradient(
+    from calc(var(--halo-sun, 0deg) - 120deg) at var(--halo-x, 50%) var(--halo-y, 50%),
+    transparent 0deg,
+    #000 120deg,
+    transparent 240deg
+  );
+  mask-image: conic-gradient(
+    from calc(var(--halo-sun, 0deg) - 120deg) at var(--halo-x, 50%) var(--halo-y, 50%),
+    transparent 0deg,
+    #000 120deg,
+    transparent 240deg
+  );
+  opacity: calc(0.75 - var(--halo-front, 0) * 0.35);
+}
+.journey-map-halo[hidden] {
+  display: none;
+}
+
+// Beats maplibregl-map's position: relative from the library's stylesheet.
+.journey-map-frame .journey-map-canvas {
+  position: absolute;
+  inset: 0;
+}
+.journey-map-canvas .maplibregl-canvas {
+  outline: none;
+}
+.journey-map-canvas .maplibregl-canvas:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: -4px;
+  box-shadow: inset 0 0 0 4px var(--map-focus);
+}
+// The canvas sits under the vignette, so its frame shows the focus too.
+.journey-map-frame:has(.maplibregl-canvas:focus-visible) {
+  outline: 2px solid var(--map-focus);
+  outline-offset: 2px;
+}
+
+.journey-map-loading {
+  position: absolute;
+  inset: auto 0 calc(50% - 0.6rem);
+  margin: 0;
+  color: rgba(232, 240, 250, 0.75);
+  font-family: $map-ui;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+.journey-map-figure:not(.is-loading) .journey-map-loading {
+  display: none;
+}
+
+/* Pins: buttons laid over the canvas; the script sets each one's translate(). */
+.journey-map-pins {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  overflow: hidden;
+  pointer-events: none;
+}
+.journey-pin {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  margin: -16px 0 0 -16px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: #ffffff;
+  cursor: pointer;
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+}
+.journey-pin[hidden] {
+  display: none;
+}
+.journey-pin-dot {
+  grid-area: 1 / 1;
+  box-sizing: border-box;
+  width: 13px;
+  height: 13px;
+  border: 2.5px solid var(--map-pin-ring);
+  border-radius: 50%;
+  background: var(--map-pin);
+  box-shadow:
+    0 0 0 1.5px rgba(255, 255, 255, 0.85),
+    0 0 12px 2px rgba(255, 196, 110, 0.6);
+  transition:
+    width 0.18s ease,
+    height 0.18s ease,
+    background-color 0.18s ease;
+}
+.journey-pin-count {
+  grid-area: 1 / 1;
+  font-family: $map-ui;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.journey-pin:hover .journey-pin-dot {
+  width: 16px;
+  height: 16px;
+}
+.journey-pin:focus {
+  outline: none;
+}
+.journey-pin:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 0;
+  box-shadow: 0 0 0 4px var(--map-focus);
+}
+
+// Where I am now: a gold dot with a slow halo.
+.journey-pin--current .journey-pin-dot,
+.journey-pin--has-current .journey-pin-dot {
+  background: var(--map-pin-current);
+}
+.journey-pin--current::after,
+.journey-pin--has-current::after {
+  content: "";
+  grid-area: 1 / 1;
+  width: 13px;
+  height: 13px;
+  border: 2px solid var(--map-pin-current);
+  border-radius: 50%;
+  animation: journey-pin-pulse 2.4s ease-out infinite;
+  pointer-events: none;
+}
+@keyframes journey-pin-pulse {
+  0% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  80%,
+  100% {
+    opacity: 0;
+    transform: scale(2.6);
+  }
+}
+
+// Several places on one spot: a numbered disc that zooms in.
+.journey-pin--cluster .journey-pin-dot {
+  width: 24px;
+  height: 24px;
+  border: 2px solid #ffffff;
+  background: rgba(10, 26, 48, 0.88);
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.6);
+}
+.journey-pin--cluster:hover .journey-pin-dot {
+  width: 27px;
+  height: 27px;
+}
+.journey-pin--cluster.journey-pin--has-current .journey-pin-dot {
+  border-color: var(--map-pin-current);
+  background: rgba(10, 26, 48, 0.88);
+}
+.journey-pin--cluster::after {
+  width: 24px;
+  height: 24px;
+}
+
+// The selected place (or the cluster holding it).
+.journey-pin--selected .journey-pin-dot {
+  width: 17px;
+  height: 17px;
+  border: 3px solid #ffffff;
+  background: var(--map-pin-selected);
+  box-shadow:
+    0 0 0 1.5px rgba(0, 0, 0, 0.35),
+    0 0 16px 4px rgba(255, 90, 60, 0.6);
+}
+.journey-pin--selected:hover .journey-pin-dot {
+  width: 19px;
+  height: 19px;
+}
+.journey-pin--cluster.journey-pin--selected .journey-pin-dot {
+  width: 26px;
+  height: 26px;
+  border-color: #ffffff;
+  background: var(--map-pin-selected);
+}
+
+// The selected place's name beside its pin.
+.journey-map-label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  max-width: 11rem;
+  padding: 0.28rem 0.55rem 0.32rem;
+  border: 1px solid rgba(255, 214, 150, 0.28);
+  border-radius: 7px;
+  background: var(--map-label-bg);
+  box-shadow: 0 6px 18px -6px rgba(0, 0, 0, 0.7);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  color: var(--map-label-text);
+  font-family: $map-ui;
+  line-height: 1.25;
+  white-space: nowrap;
+  pointer-events: none;
+  translate: 16px -50%;
+}
+.journey-map-label[data-side="left"] {
+  translate: calc(-100% - 16px) -50%;
+}
+.journey-map-label[data-side="above"] {
+  translate: -50% calc(-100% - 16px);
+}
+.journey-map-label[data-side="below"] {
+  translate: -50% 16px;
+}
+.journey-map-label[hidden] {
+  display: none;
+}
+.journey-map-label strong {
+  font-size: 0.78rem;
+}
+.journey-map-label span {
+  color: var(--map-label-muted);
+  font-size: 0.66rem;
+  letter-spacing: 0.02em;
+}
+
+/* MapLibre's own UI, scoped to the frame. */
+.journey-map-frame .maplibregl-ctrl-bottom-right {
+  z-index: 3;
+}
+.journey-map-frame .maplibregl-ctrl-attrib {
+  margin: 0 6px 6px 0;
+  font-family: $map-ui;
+  font-size: 10px;
+}
+.journey-map-frame .maplibregl-ctrl-attrib.maplibregl-compact {
+  background-color: rgba(255, 255, 255, 0.82);
+}
+// Opened, the list of sources stays clear of the zoom buttons above it, and the hint at the
+// bottom left steps aside while it is open (they share the bottom edge).
+.journey-map-frame .maplibregl-ctrl-attrib.maplibregl-compact-show {
+  max-width: calc(100% - 20px);
+}
+.journey-map-frame:has(.maplibregl-compact-show) .journey-map-hint {
+  visibility: hidden;
+}
+.journey-map-frame .maplibregl-ctrl-attrib a {
+  color: #1f3a5c;
+}
+.journey-map-frame .maplibregl-cooperative-gesture-screen {
+  z-index: 4;
+  padding: 1rem;
+  background: rgba(5, 11, 23, 0.55);
+  color: #ffffff;
+  font-family: $map-ui;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+/* The clock: the reference point's local time and whether the sun is up there. Scoped to
+   the frame to beat the page's paragraph styles. */
+.journey-map-frame .journey-map-clock {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  max-width: calc(100% - 58px);
+  margin: 0;
+  padding: 5px 10px 5px 7px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 9px;
+  background: rgba(5, 11, 23, 0.62);
+  color: #f2f5f9;
+  font-family: $map-ui;
+  font-size: 0.7rem;
+  line-height: 1.3;
+  pointer-events: none;
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+.journey-map-clock[hidden] {
+  display: none;
+}
+.journey-map-clock-text {
+  display: grid;
+  min-width: 0;
+}
+.journey-map-clock-line {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.journey-map-clock strong {
+  font-weight: 700;
+}
+.journey-map-clock-meta {
+  color: rgba(226, 234, 244, 0.78);
+  font-size: 0.64rem;
+  letter-spacing: 0.02em;
+}
+.journey-map-clock-mode {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.journey-map-clock[data-mode="live"] .journey-map-clock-mode::before {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin: 0 4px 1px 0;
+  border-radius: 50%;
+  background: #5ad08a;
+  content: "";
+}
+// A sun by day, a half-lit disc at dawn and dusk, a crescent moon at night.
+.journey-map-clock-icon {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #ffd36b;
+  box-shadow: 0 0 0 3px rgba(255, 211, 107, 0.22);
+}
+.journey-map-clock[data-phase="dawn"] .journey-map-clock-icon,
+.journey-map-clock[data-phase="dusk"] .journey-map-clock-icon {
+  background: linear-gradient(to top, #2a3550 50%, #ffb45c 50%);
+  box-shadow: 0 0 0 3px rgba(255, 160, 80, 0.2);
+}
+.journey-map-clock[data-phase="night"] .journey-map-clock-icon {
+  background: transparent;
+  box-shadow: inset -4px 2px 0 0 #dfe7f3;
+}
+
+/* Inside the frame: the view buttons down its top right corner, the hint along its bottom
+   left (clear of the attribution's button in the bottom right). */
+.journey-map-controls {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.journey-map-frame .journey-map-hint {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  z-index: 2;
+  max-width: calc(100% - 52px);
+  margin: 0;
+  padding: 4px 8px;
+  border-radius: 7px;
+  background: rgba(5, 11, 23, 0.55);
+  color: #d5dee8;
+  font-family: $map-ui;
+  font-size: 0.66rem;
+  line-height: 1.35;
+  pointer-events: none;
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+.journey-map-controls button {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--map-control-border);
+  border-radius: 8px;
+  background: var(--map-control-bg);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  color: var(--map-text);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+.journey-map-controls button:hover {
+  border-color: var(--map-control-hover-border, var(--map-control-border));
+  background: var(--map-control-hover);
+}
+.journey-map-controls button:focus-visible {
+  outline: 2px solid var(--map-focus);
+  outline-offset: 2px;
+}
+.journey-map-controls svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 1.6;
+}
+
+/* ---------- the map window ----------
+   "Expand map" opens the same live map here (journey.js moves the map's figure into the
+   window's body and back): a modal <dialog> in the middle of the screen, about
+   min(1240px, 92vw) x min(800px, 86vh) (96vw x 88vh on a phone), styled like the close-examine
+   window (_journey-examine.scss): rounded corners, a faint rim, a deep soft shadow and a dark
+   interior, over the page, dimmed and a little blurred but still there (::backdrop). The same
+   in both themes. It sits inside the Map pane in the page, so it inherits the map's colors. */
+// The page stays put behind the window; only a page that had a scrollbar keeps its room
+// (journey.js checks), so nothing behind shifts and a page with none is not pushed aside.
+html.has-journey-map-window {
+  overflow: hidden;
+}
+html.has-journey-map-window-gutter {
+  scrollbar-gutter: stable;
+}
+.journey .journey-map-window {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  box-sizing: border-box;
+  width: 1240px;
+  width: min(1240px, 92vw);
+  height: 800px;
+  height: min(800px, 86vh);
+  max-width: none;
+  max-height: none;
+  margin: auto;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 16px;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 70% 60% at 50% 45%, rgba(40, 70, 120, 0.16), transparent 70%),
+    radial-gradient(ellipse 120% 95% at 50% 45%, #0b1220 0%, #05080f 68%, #020305 100%);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.5),
+    0 2px 6px rgba(0, 0, 0, 0.35),
+    0 24px 60px -12px rgba(0, 0, 0, 0.7),
+    0 60px 140px -30px rgba(0, 0, 0, 0.75);
+  color: var(--map-text);
+  font-family: $map-ui;
+  overscroll-behavior: contain;
+}
+.journey .journey-map-window:not([open]) {
+  display: none;
+}
+.journey .journey-map-window::backdrop {
+  background: rgba(6, 9, 13, 0.52);
+  -webkit-backdrop-filter: blur(5px) saturate(0.85);
+  backdrop-filter: blur(5px) saturate(0.85);
+  animation: journey-map-dim 0.25s ease-out;
+  transition: opacity 0.2s ease-in;
+  touch-action: none;
+}
+.journey .journey-map-window.is-closing::backdrop {
+  opacity: 0;
+}
+@keyframes journey-map-dim {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.journey .journey-map-window-frame {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100%;
+}
+// The window's bar: its name on the left, "Close map" on the right.
+.journey .journey-map-window-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 52px;
+  box-sizing: border-box;
+  padding: 9px 12px 9px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.01));
+  touch-action: none;
+}
+.journey .journey-map-window-title {
+  margin: 0;
+  color: var(--map-muted);
+  font-family: $map-ui;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+.journey .journey-map-window-close {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 7px;
+  box-sizing: border-box;
+  height: 34px;
+  margin: 0;
+  padding: 0 15px 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--map-text);
+  font-family: $map-ui;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+.journey .journey-map-window-close svg {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 1.8;
+}
+.journey .journey-map-window-close:hover {
+  border-color: rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.14);
+}
+.journey .journey-map-window-close:focus:not(:focus-visible) {
+  outline: none;
+}
+.journey .journey-map-window-close:focus-visible {
+  outline: 2px solid #ffd479;
+  outline-offset: 2px;
+}
+.journey .journey-map-window-body {
+  position: relative;
+  min-height: 0;
+}
+// In the window the map fills the body edge to edge; the window is its frame.
+.journey .journey-map-window .journey-map-figure {
+  height: 100%;
+}
+.journey .journey-map-window .journey-map-frame {
+  height: 100%;
+  aspect-ratio: auto;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+// The pane, while its map is in the window.
+.journey .journey-map-away {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 1rem;
+  color: var(--map-muted);
+  font-family: $map-ui;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  line-height: 1.4;
+  text-align: center;
+}
+.journey .journey-map-away[hidden] {
+  display: none;
+}
+@media (max-width: 699.98px) {
+  .journey .journey-map-window {
+    width: 96vw;
+    height: 88vh;
+    height: 88dvh;
+    border-radius: 14px;
+  }
+  .journey .journey-map-window-bar {
+    min-height: 48px;
+    padding: 7px 8px 7px 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .journey-pin-dot,
+  .journey-map-controls button,
+  .journey .journey-map-window-close {
+    transition: none;
+  }
+  .journey .journey-map-window::backdrop {
+    animation: none;
+    transition: none;
+  }
+  .journey-pin--current::after,
+  .journey-pin--has-current::after {
+    animation: none;
+    opacity: 0.6;
+    transform: scale(1.7);
+  }
+}
+
+@media print {
+  .journey-map-figure,
+  .journey .journey-map-window {
+    display: none !important;
+  }
+}
+
+@media screen {
+  html[data-theme="dark"] {
+    .journey-pane--map {
+      --map-space:
+        radial-gradient(ellipse 55% 42% at 84% 16%, rgba(96, 64, 168, 0.16), transparent 70%),
+        radial-gradient(ellipse 48% 40% at 10% 90%, rgba(20, 84, 150, 0.14), transparent 70%),
+        radial-gradient(ellipse 85% 80% at 50% 50%, #08101f 0%, #03070f 55%, #000205 100%);
+      --map-pin-ring: #0b1a2e;
+      --map-pin-selected: #ff5e4a;
+      --map-pin-current: #f0c75e;
+    }
+    .journey-map-frame .maplibregl-ctrl-attrib.maplibregl-compact {
+      background-color: rgba(20, 29, 40, 0.85);
+      color: #c9d4e0;
+    }
+    .journey-map-frame .maplibregl-ctrl-attrib a {
+      color: #a8cdf2;
+    }
+    .journey-map-frame .maplibregl-ctrl-attrib-button {
+      filter: invert(1);
+    }
+  }
+}

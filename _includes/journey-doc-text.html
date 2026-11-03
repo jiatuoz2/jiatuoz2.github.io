@@ -1,0 +1,51 @@
+{% comment %} The text of one board document (_includes/journey-doc.html): its kind, title (linked when it has a link), photo, details, stamp and
+credits (and a portrait's credit, printed as given: "Photo: …"). Called from journey-doc.html, whose jd_ variables it reads (Liquid assigns are
+global), straight into the document's item or into the caption of a scan or an object. A photo with an image_pixel (the team photo) is private, as a
+portrait is: it shows that pixelated stand-in here (board, filmstrip, no JavaScript; heavily blurred on the mounted board, .board-private), and the
+examine view shows it pixelated too until "Reveal photo" brings in data-original, the image itself. {% endcomment %}
+<p class="board-doc-kind">{{ jd.kind | replace: '-', ' ' }}</p>
+<h4 class="board-doc-title">
+  {% if jd.link %}
+  <a href="{{ jd_link }}" rel="{{ jd_rel }}">{{ jd.title }}</a>
+  {%- else -%} {{ jd.title }} {%- endif %}
+</h4>
+{% if jd_photo and jd_object == false %}
+<figure class="board-doc-photo">
+  {% if jd.image_pixel and jd_photo == jd.image %}<img
+    class="board-private"
+    src="{{ jd.image_pixel | relative_url }}"
+    alt="Pixelated until revealed. {{ jd.image_alt | strip }}"
+    data-original="{{ jd.image | relative_url }}"
+    data-original-alt="{{ jd.image_alt | strip }}"
+    draggable="false"
+    loading="lazy"
+    decoding="async"
+  />{% else %}<img src="{{ jd_photo | relative_url }}" alt="{{ jd.image_alt }}" draggable="false" loading="lazy" decoding="async" />{% endif %}
+</figure>
+{% endif %} {% if jd.meta %}
+<p class="board-doc-meta">{{ jd.meta }}</p>
+{% endif %} {% if jd.dates %}
+<p class="board-doc-dates">{{ jd.dates }}</p>
+{% endif %} {% if jd.body %}
+<p class="board-doc-body">{{ jd.body }}</p>
+{% endif %} {% if jd.stamp %}
+<p class="board-stamp">{{ jd.stamp }}</p>
+{% endif %} {% if jd.credit %}
+<p class="board-doc-credit">
+  {{ jd_credit }}: {% if jd.credit_link -%}
+  <a href="{{ jd.credit_link }}" rel="noopener">{{ jd.credit }}</a>
+  {%- else -%} {{ jd.credit }} {%- endif %}
+</p>
+{% endif %} {% if jd.scan_credit %}
+<p class="board-doc-credit board-scan-credit">
+  Scan: {% if jd.scan_credit_link -%}
+  <a href="{{ jd.scan_credit_link }}" rel="noopener">{{ jd.scan_credit }}</a>
+  {%- else -%} {{ jd.scan_credit }} {%- endif %}
+</p>
+{% endif %} {% if jd_portrait and jd.portrait_credit %}
+<p class="board-doc-credit board-portrait-credit">
+  {% if jd.portrait_credit_link -%}
+  <a href="{{ jd.portrait_credit_link }}" rel="noopener">{{ jd.portrait_credit }}</a>
+  {%- else -%} {{ jd.portrait_credit }} {%- endif %}
+</p>
+{% endif %}

@@ -5,6 +5,12 @@ author_profile: true
 redirect_from: [/about/, /about.html]
 ---
 
+<aside class="phd-callout" id="phd-applications" aria-labelledby="phd-applications-title">
+  <p class="phd-callout-kicker"><span class="phd-callout-icon" aria-hidden="true"></span> <span id="phd-applications-title">Applying to PhD programs</span></p>
+  <p class="phd-callout-text">I am applying to PhD programs for <strong>Fall 2027</strong>. If our research interests align, I welcome the opportunity to connect; email is the best way to reach me.</p>
+  <p class="phd-callout-actions"><a class="phd-callout-button" href="mailto:{{ site.author.email }}">Email me</a> <a class="phd-callout-link" href="{{ site.author.cv | relative_url }}">View CV</a></p>
+</aside>
+
 <h1 id="about-me">About Me</h1>
 
 I am Jiatuo "Charlie" Zou, a researcher in **Human-Computer Interaction (HCI)** and a graduate of Columbia University (M.S.). I recently joined the [SPICE Lab](https://spice-lab.org/) at Northwestern University, advised by [Karan Ahuja](https://karan-ahuja.com/). Previously, I was a research assistant in the [CGUI Lab](https://graphics.cs.columbia.edu/home) at Columbia University, working with [Steven Feiner](https://www.cs.columbia.edu/~feiner/).
@@ -31,8 +37,6 @@ I am interested in building **context-aware interaction systems** that adapt to 
 </ul>
 </div>
 
-I am applying to PhD programs for **Fall 2027**. If our research interests align, I welcome the opportunity to connect; [email](mailto:{{ site.author.email }}) is the best way to reach me.
-
 <h2 id="news" class="section-heading"><span class="section-icon" aria-hidden="true">🔥</span> News</h2>
 <ul class="news-list">
 {% assign updates = site.news | sort: 'date' | reverse %}
@@ -41,3 +45,6 @@ I am applying to PhD programs for **Fall 2027**. If our research interests align
 
 <h2 id="publications" class="section-heading"><span class="section-icon" aria-hidden="true">📝</span> Publications</h2>
 {% include publications.html %}
+
+<h2 id="journey" class="section-heading"><span class="section-icon" aria-hidden="true">🧭</span> My Journey</h2>
+{% include journey.html %}

@@ -15,6 +15,7 @@ assets/js/main.min.js
 assets/js/collapse.js
 assets/js/plugins/
 assets/js/vendor/
+assets/vendor/
 _sass/**/*.scss
 !_sass/_site.scss
 !_sass/_profile-banner.scss

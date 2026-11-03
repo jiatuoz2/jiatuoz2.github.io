@@ -5,3 +5,5 @@ main:
     url: /#news
   - title: Publications
     url: /#publications
+  - title: Journey
+    url: /#journey

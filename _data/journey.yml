@@ -1,0 +1,753 @@
+# "My Journey" map and detective boards on the homepage (_includes/journey.html).
+# Facts come from assets/pdf/cv.pdf, _bibliography/papers.bib, _pages/about.md, and what
+# Jiatuo has stated directly (Hangzhou before 2017; Westminster Academy, Fort Lauderdale,
+# 2017-2021, salutatorian of the class of 2021, FRC Team 744 in the 2019 and 2020
+# seasons; the 2020 competition was cancelled because of COVID-19). Keep them in step with those sources rather than adding new claims here.
+#
+# stops: chronological. The map draws a route through them in this order and dims older
+#   legs. lat/lon are decimal degrees. year is the short label on the timeline. start/end
+#   are YYYY-MM, or a quoted "YYYY" when only the year is known (start may be blank when
+#   unknown). current: true marks where I am now. tz is the IANA time zone of the current
+#   stop, for the clock on the map (without it the map shows local solar time).
+# docs: the documents pinned to that stop's board, in reading order. A stack sits where its
+#   first doc appears.
+#   kind        place | education | lab | project | paper | person | course | work |
+#               award | note | photo | artifact
+#   title/meta  heading and one-line context; for a photo, a short caption and the place
+#   dates, body optional date line and short description
+#   link        absolute URL, site path (/...), or same-page anchor (#paper-<bibtex key>)
+#   image       optional picture (site path); image_alt describes it. image_fit: contain
+#               shows a tall picture on white whole, as an upright print (default: cropped).
+#   image_pixel a pixelated stand-in for a photo of people (site path, <image>.pixel.jpg, made
+#               by bin/build_journey_pixelated.py): the board shows it in place of the image;
+#               the close-examine view shows the image itself (for the team photo, with every
+#               face but Jiatuo's already has a black bar over the eyes in it).
+#               Every photo and artifact doc has one: an item that needs a picture but
+#               has none is left out, never shown as a text-only card.
+#   credit      required for any picture not made by Jiatuo: "Author, License" (or the
+#               source, for the few pictures used with permission; see CREDITS.md)
+#   credit_link the picture's source page (for licensing); see assets/img/journey/CREDITS.md
+#   stamp       short rubber-stamp text (venue, status)
+#   stack       id of a stack on this board; stacked docs share one pin and fan out on click
+#   medium      how the doc is presented. artifact: cutout (the only kind to use: a PNG
+#               with a transparent background and a clean edge, the object lying on the
+#               paper under its own shadow). An object with no clean cutout is left out;
+#               don't use photo or the legacy bag for artifacts. note: sticky | notebook.
+#   attach      id of another doc on this board; the doc is drawn on that one, over its
+#               bottom edge or a lower corner, and moves with it (it is not a separate
+#               item and takes no stack). No tape, pin or string holds an artifact.
+#   scan_kind   the doc is a real document: diploma (a scan of the diploma itself) |
+#               paper-page (a paper's first page, printed) | cover (a closed diploma cover
+#               with a plain typed label, for a diploma with no scan yet)
+#   scan        the scan (site path, assets/img/journey/docs/<doc id>.jpg); scan_alt
+#               describes it; scan_width/scan_height are its pixel size. Without a scan, a
+#               diploma or paper-page uses the doc's image; a cover needs none.
+#   scan_large  optional: the same page rendered large (<doc id>-large.jpg, about 2600-3600
+#               px wide), loaded only by the close-examine view, which swaps it in once it
+#               has decoded so the page stays sharp at 250%
+#   scan_label  the typed label on a cover (default: the title)
+#   portrait    person docs only: a head-and-shoulders photo of that person (site path,
+#               assets/img/journey/people/<name>.jpg, square, about 400 px). It is drawn
+#               pixelated on the board (portrait_pixel) and shown only on request, by
+#               "Reveal photo" in the close-examine view.
+#               portrait_alt describes it. Use only an openly licensed photo or one from the
+#               person's own official profile (lab or university page, personal homepage);
+#               never social media or news photos. No suitable photo: leave it out.
+#   portrait_pixel        the portrait's pixelated stand-in (people/<name>.pixel.jpg, made by
+#                         bin/build_journey_pixelated.py): shown on the board, and in the
+#                         close-examine view until the visitor presses "Reveal photo"
+#   portrait_credit       the full credit line, shown as is: "Photo: <source page title>"
+#                         for a profile photo, or "Photo: Author, License"
+#   portrait_credit_link  the page the photo comes from (see CREDITS.md)
+#   Scans are Jiatuo's own documents and papers (no credit row needed); only a paper's first
+#   page, or the page that is the diploma itself (page 2 of the UIUC eDiploma PDF, whose page
+#   1 is the registrar's cover sheet), never a page with a registrar's details.
+# artifact: a physical object tied to the work (a device it ran on, a sensor it read).
+#   The picture shows that kind of object, not Jiatuo's own unit, unless Jiatuo supplied
+#   it (the two FRC Team 744 robots are cut out of his own photos). Name a model only when the CV or Jiatuo names it (the Linktop health monitor);
+#   otherwise name the category. Never use a drawing, a plain photo or a different model;
+#   leave the artifact out instead. A recoloured picture (the salutatorian cords) says so
+#   in its credit. Pictures live in assets/img/journey/artifacts/
+#   (credits in assets/img/journey/CREDITS.md).
+# stacks: piles of related docs under one pin (id, title). Stack ids are unique across all
+#   boards (they become page ids). Keep each board to at most nine top-level items
+#   (unstacked docs plus stacks; attached docs don't count) so the fixed-size board never
+#   overflows.
+# threads: red strings between doc ids on the same board; label says how they relate. A
+#   thread to a stacked doc attaches to its stack's pin while the stack is closed.
+
+stops:
+  - id: hangzhou-early
+    name: Hangzhou, China
+    short: Hangzhou
+    year: "–2017"
+    lat: 30.3096
+    lon: 120.1435
+    start:
+    end: "2017"
+    period: Before 2017
+    headline: Hangzhou, China
+    summary: The Daguan area of Gongshu District, Hangzhou, before leaving for high school in the United States in 2017.
+    docs:
+      - id: hangzhou-early-place
+        kind: place
+        title: Hangzhou, China
+        meta: Daguan area, Gongshu District · before 2017
+        body: Home until 2017. Daguan, “the great pass”, is named for Beixinguan, the Ming-dynasty customs pass on the Grand Canal here.
+        image: /assets/img/journey/hangzhou-early-grand-canal-daguan.jpg
+        image_alt: A wide, calm canal runs straight ahead between banks of willows and dense trees under an overcast sky, with apartment towers far in the distance.
+        credit: 方的1P, CC BY-SA 4.0, cropped
+        credit_link: https://commons.wikimedia.org/wiki/File:Grand_Canal_from_the_Daguan_Bridge.jpg
+      - id: hangzhou-early-gongchen
+        kind: photo
+        title: Gongchen Bridge on the Grand Canal
+        meta: Gongshu District, Hangzhou
+        body: A three-arched stone bridge, first built in 1631 and rebuilt in 1885; it marks the end of the Grand Canal in Hangzhou.
+        image: /assets/img/journey/hangzhou-early-gongchen-bridge.jpg
+        image_alt: A long three-arched stone bridge spans the wide canal, with a moored white boat on the left and new apartment towers and cranes behind.
+        credit: Zhangzhugang, CC BY-SA 4.0
+        credit_link: https://commons.wikimedia.org/wiki/File:Hangzhou_Gongchen_Qiao_2015.08.01_06-52-03.jpg
+      - id: hangzhou-early-qiaoxi
+        kind: photo
+        title: Qiaoxi historic block
+        meta: West of Gongchen Bridge
+        body: Old canal-side streets restored and opened in 2010, part of the Grand Canal World Heritage Site since 2014.
+        image: /assets/img/journey/hangzhou-early-qiaoxi.jpg
+        image_alt: A paved lane runs between low white-walled houses and open timber pavilions, with people sitting on benches and autumn trees behind.
+        credit: Siyuwj, CC BY-SA 4.0
+        credit_link: https://commons.wikimedia.org/wiki/File:%E6%9D%AD%E5%B7%9E%E6%A1%A5%E8%A5%BF%E7%9B%B4%E8%A1%97,_2021-11-13_01.jpg
+      - id: hangzhou-early-xiangji
+        kind: photo
+        title: Xiangji Temple by the canal
+        meta: Dadou Road, Gongshu District
+        body: Founded in 978 and rebuilt in 2009–2010; one of its two Qing-dynasty stone pagodas survives.
+        image: /assets/img/journey/hangzhou-early-xiangji-temple.jpg
+        image_alt: A temple hall with red pillars, a grey tiled roof and a gold name plaque stands behind a paved square, flanked by two white stone elephants.
+        credit: 猫猫的日记本, CC BY-SA 4.0
+        credit_link: https://commons.wikimedia.org/wiki/File:Xiangji_Temple_in_Hangzhou_06_2014-09.JPG
+      - id: hangzhou-early-canal-view
+        kind: photo
+        title: The Grand Canal by West Lake Cultural Square
+        meta: Hangzhou
+        body: The tall tower on the right is the main building of West Lake Cultural Square, on the canal's bank.
+        image: /assets/img/journey/hangzhou-early-canal-view.jpg
+        image_alt: Seen from high up, a wide canal runs into the distance under a footbridge, between tree-lined banks and apartment towers, with a tall glass tower narrowing at its waist on the right.
+        credit: Jiatuo Zou
+    threads:
+      - [hangzhou-early-place, hangzhou-early-gongchen, Grand Canal]
+      - [hangzhou-early-gongchen, hangzhou-early-qiaoxi, west of the bridge]
+      - [hangzhou-early-place, hangzhou-early-xiangji, by the canal]
+      - [hangzhou-early-place, hangzhou-early-canal-view, down the canal]
+
+  - id: fort-lauderdale
+    name: Fort Lauderdale, Florida
+    short: Fort Lauderdale, FL
+    year: "2017"
+    lat: 26.1965
+    lon: -80.1180
+    start: "2017"
+    end: "2021"
+    period: 2017 – 2021
+    headline: High school, Westminster Academy
+    summary: Four years of high school at Westminster Academy in Fort Lauderdale, on the school's FIRST Robotics team, graduating as salutatorian in 2021.
+    docs:
+      - id: fort-lauderdale-place
+        kind: place
+        title: Fort Lauderdale, FL
+        meta: 2017 – 2021
+        image: /assets/img/journey/fort-lauderdale-new-river.jpg
+        image_alt: A raised rusty drawbridge and downtown towers under a pink evening sky, with small boats docked on the New River.
+        credit: Ianaré Sévi, CC BY-SA 3.0, cropped
+        credit_link: https://commons.wikimedia.org/wiki/File:New_River_Ft_Lauderdale.jpg
+      - id: westminster
+        kind: education
+        title: Westminster Academy
+        meta: High school · Fort Lauderdale, Florida
+        dates: 2017 – 2021
+        body: Four years of high school. Salutatorian, Class of 2021.
+        scan_kind: cover
+        scan_label: Westminster Academy · 2021
+      - id: westminster-cords
+        kind: artifact
+        medium: cutout
+        attach: westminster
+        title: Salutatorian cords
+        meta: Honor cords in yellow and blue
+        image: /assets/img/journey/artifacts/salutatorian-cords.png
+        image_alt: A loosely coiled honor cord twisted from blue and yellow strands, ending in four yellow tassels.
+        credit: Ejs1989, CC BY-SA 4.0, recoloured
+        credit_link: https://commons.wikimedia.org/wiki/File:Honor_Cord_if_Kappa_Pi_International_Honorary_Art_Fraternity.jpg
+      - id: frc-744
+        kind: project
+        title: FRC Team 744
+        meta: FIRST Robotics Competition · 2019 & 2020 seasons
+        body: “Shark Attack”, Westminster Academy's FIRST Robotics Competition team.
+        link: https://sharkattack744.com/
+      - id: frc-744-2019-robot
+        kind: artifact
+        medium: cutout
+        attach: frc-744
+        title: "2019 robot · Destination: Deep Space"
+        meta: Holding a cargo ball
+        image: /assets/img/journey/artifacts/frc-744-2019-robot.png
+        image_alt: Team 744's 2019 robot, a square base in blue bumpers numbered 744 under an aluminium A-frame with clear side panels and a black carbon-fibre lift, holding an orange ball between green rollers.
+        credit: Jiatuo Zou
+      - id: frc-744-team
+        kind: photo
+        title: FRC Team 744 · Shark Attack
+        meta: Westminster Academy
+        image: /assets/img/journey/fort-lauderdale-frc-744-team.jpg
+        image_pixel: /assets/img/journey/fort-lauderdale-frc-744-team.pixel.jpg
+        image_alt: Members of FRC Team 744 standing arm in arm; everyone except Jiatuo, far right, has a black bar over their eyes.
+        credit: Jiatuo Zou
+      - id: frc-744-2020-robot
+        kind: artifact
+        medium: cutout
+        attach: frc-744-team
+        title: 2020 robot · Infinite Recharge
+        meta: Season cut short by COVID-19
+        image: /assets/img/journey/artifacts/frc-744-2020-robot.png
+        image_alt: Team 744's 2020 robot seen from the front, an aluminium frame in blue bumpers numbered 744, with green-wheeled rollers below a hooded shooter at the top and two tall curved uprights either side.
+        credit: Jiatuo Zou
+      - id: fort-lauderdale-beach
+        kind: photo
+        title: The beach on the Atlantic
+        meta: Fort Lauderdale
+        image: /assets/img/journey/fort-lauderdale-beach.jpg
+        image_alt: A long sandy beach with palm trees and beachgoers, the blue Atlantic on the right and a line of high-rise buildings along the shore.
+        credit: Daniel Dudek, CC BY 2.0
+        credit_link: https://commons.wikimedia.org/wiki/File:Beach_at_Fort_Lauderdale.jpg
+      - id: fort-lauderdale-skyline
+        kind: photo
+        title: Downtown skyline, 2015
+        meta: Fort Lauderdale
+        image: /assets/img/journey/fort-lauderdale-skyline.jpg
+        image_alt: Downtown Fort Lauderdale towers under scattered clouds, with palm trees, low buildings and a large yacht in the foreground.
+        credit: KeanoManu, CC BY-SA 4.0, cropped
+        credit_link: https://commons.wikimedia.org/wiki/File:Skyline_of_Fort_Lauderdale,_Nov-15_(cropped).jpg
+    threads:
+      - [fort-lauderdale-place, westminster, high school]
+      - [fort-lauderdale-place, fort-lauderdale-beach, the coast]
+      - [fort-lauderdale-place, fort-lauderdale-skyline, downtown]
+      - [westminster, frc-744, robotics team]
+      - [frc-744, frc-744-team, the team]
+
+  - id: champaign
+    name: Champaign, Illinois
+    short: Champaign, IL
+    year: "2021"
+    lat: 40.1020
+    lon: -88.2272
+    start: 2021-08
+    end: 2024-05
+    period: Aug 2021 – May 2024
+    headline: B.S. in Computer Science, University of Illinois Urbana-Champaign
+    summary: Undergraduate years at Illinois, with research in a data lab, course assisting, and game development, plus a hybrid internship in 2025.
+    docs:
+      - id: champaign-place
+        kind: place
+        title: Champaign, IL
+        meta: 2021 – 2024
+        image: /assets/img/journey/champaign-main-quad.jpg
+        image_alt: A broad green lawn under large shade trees, with the domed Foellinger Auditorium at the far end and students walking in the distance.
+        credit: Amphylite, CC0
+        credit_link: https://commons.wikimedia.org/wiki/File:UIUCMainQuad.jpg
+      - id: uiuc
+        kind: education
+        wide: true
+        title: University of Illinois Urbana-Champaign
+        meta: B.S. Computer Science
+        dates: Aug 2021 – May 2024
+        body: Graduated with Highest Honors in Engineering; Dean's List.
+        scan_kind: diploma
+        scan: /assets/img/journey/docs/uiuc.jpg
+        scan_large: /assets/img/journey/docs/uiuc-large.jpg
+        scan_alt: Jiatuo Zou's diploma from the University of Illinois Urbana-Champaign, Bachelor of Science in Computer Science with Highest Honors, on cream paper; only the university's name, his name, the degree and the honours are legible, and the rest, including the seal and signatures, is blurred.
+        scan_width: 1800
+        scan_height: 1391
+      - id: forward-data-lab
+        kind: lab
+        title: Forward Data Lab
+        meta: Research Assistant · UIUC
+        dates: Aug – Dec 2023
+      - id: llm-context
+        kind: project
+        stack: champaign-projects
+        title: LLM Context Augmentation
+        meta: Forward Data Lab
+        dates: Aug – Dec 2023
+        body: A retrieval-augmented LLM pipeline (LangChain, Chroma) over papers and conversation history, evaluated with BLEU against ChatGPT references.
+      - id: trippindark
+        kind: project
+        stack: champaign-projects
+        title: TrippinDark
+        meta: Course project · Unreal Engine 5
+        dates: Jan – May 2023
+        body: NPC behavior, two game levels, inventory, puzzles, and traps.
+      - id: hackillinois
+        kind: award
+        title: HackIllinois 2022
+        meta: Winner, General Track (Web Development)
+      - id: cs361
+        kind: course
+        stack: champaign-work
+        title: CS 361 Probability & Statistics
+        meta: Course Assistant
+        dates: Aug 2023 – May 2024
+      - id: phind
+        kind: work
+        stack: champaign-work
+        title: PhinD
+        meta: Software Engineer Intern · Hybrid, during my M.S.
+        dates: Jan – May 2025
+        body: File management on AWS S3, FastAPI services, and an embedding-based job recommender.
+      - id: champaign-siebel
+        kind: photo
+        title: Siebel Center for Computer Science
+        meta: University of Illinois
+        image: /assets/img/journey/champaign-siebel-center.jpg
+        image_alt: A modern brick-and-glass building seen through bare autumn trees along a curving campus path.
+        credit: Joe Futrelle, CC BY-SA 2.0
+        credit_link: https://commons.wikimedia.org/wiki/File:Thomas_M._Siebel_Center_for_Computer_Science.jpg
+      - id: champaign-grainger
+        kind: photo
+        title: Grainger Engineering Library
+        meta: University of Illinois
+        image: /assets/img/journey/champaign-grainger-library.jpg
+        image_alt: A red-brick library with a grey slate roof and a large arched dormer window, set behind a green lawn.
+        credit: Daderot, public domain
+        credit_link: https://commons.wikimedia.org/wiki/File:Grainger_Engineering_Library_-_UIUC_-_DSC09165.JPG
+    stacks:
+      - id: champaign-projects
+        title: Projects
+      - id: champaign-work
+        title: Work & teaching
+    threads:
+      - [champaign-place, uiuc, studied]
+      - [uiuc, forward-data-lab, research]
+      - [forward-data-lab, llm-context, project]
+      - [uiuc, trippindark, course project]
+      - [uiuc, hackillinois, hackathon]
+      - [uiuc, cs361, taught]
+      - [champaign-place, phind, hybrid internship]
+      - [uiuc, champaign-siebel, campus]
+      - [uiuc, champaign-grainger, campus]
+
+  - id: hangzhou
+    name: Hangzhou, China
+    short: Hangzhou
+    year: "2024"
+    lat: 30.3176
+    lon: 120.3425
+    start: 2024-05
+    end: 2024-08
+    period: May – Aug 2024
+    headline: Research Assistant, Lab of Brain-Computer Intelligence, Hangzhou Dianzi University
+    summary: A summer leading a team that built a full-stack telemedicine health pod.
+    docs:
+      - id: hangzhou-place
+        kind: place
+        title: Hangzhou, China
+        meta: Summer 2024
+        body: Summer research at Hangzhou Dianzi University.
+        image: /assets/img/journey/hangzhou-west-lake-skyline.jpg
+        image_alt: A wide expanse of blue lake water with small boats, and a long line of city towers on the far shore.
+        credit: Windmemories, CC BY-SA 4.0
+        credit_link: https://commons.wikimedia.org/wiki/File:20260424_West_Lake_and_Hangzhou_Skyline.jpg
+      - id: hdu-lab
+        kind: lab
+        wide: true
+        title: Lab of Brain-Computer Intelligence
+        meta: Research Assistant · Hangzhou Dianzi University
+        dates: May – Aug 2024
+      - id: idts
+        kind: project
+        wide: true
+        title: IDTS Healthcare “Pod”
+        meta: Intelligent Diagnosis & Telemedicine System
+        body: An onboard React web UI, WeChat mini-program, and MySQL backend, streaming ECG, temperature, blood pressure, SpO₂, and glucose readings over Bluetooth.
+      - id: idts-linktop
+        kind: artifact
+        medium: cutout
+        attach: idts
+        title: Linktop health monitor
+        meta: Readings streamed over Bluetooth (Linktop SDK)
+        image: /assets/img/journey/artifacts/linktop-health-monitor.png
+        image_alt: A small white rounded-square health monitor printed with “LINKTOP”, with a silver-ringed sensor pad in the middle of its face and a sensor window on its front edge.
+        credit: Linktop (product image, supplied by Jiatuo)
+      - id: idts-team
+        kind: note
+        title: Team of 7
+        meta: Project lead
+        body: Planned 8-week milestones, weekly check-ins, and one-to-one development help.
+      - id: hangzhou-hdu-gate
+        kind: photo
+        title: Hangzhou Dianzi University, main gate
+        meta: Xiasha campus, Hangzhou
+        image: /assets/img/journey/hangzhou-hdu-gate.jpg
+        image_alt: A tall red-brick gate tower with a round opening at its top, joined to a long orange steel truss spanning the campus entrance plaza.
+        credit: CatOnMars, CC BY-SA 4.0, cropped
+        credit_link: https://commons.wikimedia.org/wiki/File:Main(South)_Gate_of_Hangzhou_Dianzi_University_Xiasha_Campus.jpg
+      - id: hangzhou-xiasha
+        kind: photo
+        title: Xiasha from the air
+        meta: Eastern Hangzhou
+        image: /assets/img/journey/hangzhou-xiasha-aerial.jpg
+        image_alt: An aerial view through haze of a city grid on a curving riverbank, with wide tidal flats along the water.
+        credit: Windmemories, CC BY-SA 4.0
+        credit_link: https://commons.wikimedia.org/wiki/File:20231125_Xiasha,_Hangzhou.jpg
+    threads:
+      - [hangzhou-place, hdu-lab, summer research]
+      - [hdu-lab, idts, project]
+      - [idts-team, idts, led]
+      - [hdu-lab, hangzhou-hdu-gate, university]
+      - [hangzhou-hdu-gate, hangzhou-xiasha, Xiasha]
+
+  - id: new-york
+    name: New York, New York
+    short: New York, NY
+    year: "2024"
+    lat: 40.8075
+    lon: -73.9626
+    start: 2024-09
+    end: 2026-05
+    period: Sep 2024 – May 2026
+    headline: M.S. in Computer Science, Columbia University
+    summary: Graduate study at Columbia and research across two labs on XR, robot teleoperation, and brain–computer interfaces.
+    docs:
+      - id: new-york-place
+        kind: place
+        title: New York, NY
+        meta: 2024 – 2026
+        body: Two labs, one city.
+        image: /assets/img/journey/new-york-manhattan-skyline.jpg
+        image_alt: The towers of Lower Manhattan, led by One World Trade Center, rise above the water of New York Harbor under a clear sky.
+        credit: Jakub Hałun, CC BY 4.0, cropped
+        credit_link: https://commons.wikimedia.org/wiki/File:Manhattan_skyline_from_Upper_New_York_Bay,_20231001_1043_0903.jpg
+      - id: columbia
+        kind: education
+        wide: true
+        title: Columbia University
+        meta: M.S. Computer Science · GPA 4.00
+        dates: Sep 2024 – May 2026
+        scan_kind: diploma
+        scan: /assets/img/journey/docs/columbia.jpg
+        scan_large: /assets/img/journey/docs/columbia-large.jpg
+        scan_alt: Jiatuo Zou's Columbia University diploma, Master of Science; only the university's name, his name and the degree are legible, and the rest, including the seal and signatures, is blurred.
+        scan_width: 1400
+        scan_height: 1082
+      - id: cgui
+        kind: lab
+        title: Computer Graphics & User Interfaces Lab
+        meta: Research Assistant
+        dates: From Sep 2024
+        link: https://graphics.cs.columbia.edu/home
+      - id: feiner
+        kind: person
+        stack: ny-cgui-people
+        title: Steven Feiner
+        meta: CGUI Lab
+        link: https://www.cs.columbia.edu/~feiner/
+        portrait: /assets/img/journey/people/feiner.jpg
+        portrait_pixel: /assets/img/journey/people/feiner.pixel.jpg
+        portrait_alt: Head-and-shoulders photo of Steven Feiner, smiling, with grey hair, in front of a window.
+        portrait_credit: "Photo: Steven K. Feiner (Columbia homepage)"
+        portrait_credit_link: https://www.cs.columbia.edu/~feiner/
+      - id: liinc
+        kind: lab
+        title: Laboratory for Intelligent Imaging & Neural Computing
+        meta: Research Assistant
+        dates: From May 2025
+      - id: sajda
+        kind: person
+        stack: ny-liinc-people
+        title: Paul Sajda
+        meta: LIINC, Columbia
+        portrait: /assets/img/journey/people/sajda.jpg
+        portrait_pixel: /assets/img/journey/people/sajda.pixel.jpg
+        portrait_alt: Head-and-shoulders photo of Paul Sajda, smiling, in a lavender polo shirt against a white background.
+        portrait_credit: "Photo: Jeffrey Schifman / Columbia Engineering, via LIINC"
+        portrait_credit_link: https://liinc.bme.columbia.edu/people/paul-sajda
+      - id: li
+        kind: person
+        stack: ny-liinc-people
+        title: Ziheng (Leo) Li
+        meta: LIINC, Columbia
+        portrait: /assets/img/journey/people/li.jpg
+        portrait_pixel: /assets/img/journey/people/li.pixel.jpg
+        portrait_alt: Head-and-shoulders photo of Ziheng (Leo) Li in a patterned shirt, in front of a dark curtain hung with glowing light bulbs.
+        portrait_credit: "Photo: Leo Li | Laboratory for Intelligent Imaging and Neural Computing"
+        portrait_credit_link: https://liinc.bme.columbia.edu/people/leo-li
+      - id: olive
+        kind: paper
+        stack: ny-papers
+        title: OLIVE
+        meta: XR agent learning from behavior and EEG
+        stamp: UIST 2026
+        image: /assets/img/publication_preview/olive_teaser.png
+        image_alt: An XR task environment with virtual aircraft, EEG signals, and a participant wearing a headset.
+        link: "#paper-li2026augmenting"
+        scan_kind: paper-page
+        scan: /assets/img/journey/docs/olive.jpg
+        scan_large: /assets/img/journey/docs/olive-large.jpg
+        scan_alt: The first page of the OLIVE paper, “Augmenting Human Performance with an XR Agent Learning from Online Behavior and BCI Evidence”, with its author list, a figure of the XR task and EEG setup, and the abstract.
+        scan_width: 1200
+        scan_height: 1553
+      - id: xichen-he
+        kind: person
+        stack: ny-cgui-people
+        title: Xichen He
+        meta: Co-first author, OLIVE · co-author, Delegate the Details
+        portrait: /assets/img/journey/people/xichen-he.jpg
+        portrait_pixel: /assets/img/journey/people/xichen-he.pixel.jpg
+        portrait_alt: Photo of Xichen He, smiling, with glasses and a black T-shirt, giving two thumbs up indoors.
+        portrait_credit: "Photo: Xichen He (xichenhe.com)"
+        portrait_credit_link: https://xichenhe.com/
+      - id: vr-guidance
+        kind: paper
+        stack: ny-papers
+        title: VR Task Guidance
+        meta: Relative 6DoF pose specification
+        stamp: ISMAR 2025 Adjunct
+        image: /assets/img/publication_preview/virtual_teaser.png
+        image_alt: A virtual reality visualization of relative object poses for task guidance.
+        link: "#paper-yang2025vrguidance"
+        scan_kind: paper-page
+        scan: /assets/img/journey/docs/vr-guidance.jpg
+        scan_large: /assets/img/journey/docs/vr-guidance-large.jpg
+        scan_alt: The first page of “Virtual Reality Task Guidance Through Relative 6DoF Pose Specification”, with its author list, a figure of virtual motor parts, and the abstract.
+        scan_width: 1200
+        scan_height: 1553
+      - id: bimanual
+        kind: paper
+        stack: ny-papers
+        title: Bimanual XR Assembly Hierarchies
+        meta: Teleoperation goals for robots
+        stamp: IEEE VRW 2026
+        image: /assets/img/publication_preview/bimanual_teaser.jpg
+        image_alt: A bimanual XR interface for specifying assembly hierarchies.
+        link: "#paper-yang2026bimanual"
+        scan_kind: paper-page
+        scan: /assets/img/journey/docs/bimanual.jpg
+        scan_large: /assets/img/journey/docs/bimanual-large.jpg
+        scan_alt: The first page of “Bimanual XR Specification of Relative and Absolute Assembly Hierarchies for Teleoperation”, with its author list, a figure of the bimanual interface, and the abstract.
+        scan_width: 1200
+        scan_height: 1553
+      - id: delegate
+        kind: paper
+        stack: ny-papers
+        title: Delegate the Details
+        meta: Assembly constraint authoring in collaborative XR
+        stamp: ISMAR 2026
+        image: /assets/img/publication_preview/delegate_teaser.png
+        image_alt: An XR assembly interface showing grouped components and a handheld controller.
+        link: "#paper-yang2026delegate"
+        scan_kind: paper-page
+        scan: /assets/img/journey/docs/delegate.jpg
+        scan_large: /assets/img/journey/docs/delegate-large.jpg
+        scan_alt: "The first page of “Delegate the Details: Flexible Assembly Constraint Authoring for Collaborative XR”, with its author list, a figure of parts on a pallet, and the abstract."
+        scan_width: 1200
+        scan_height: 1553
+      - id: ben-yang
+        kind: person
+        stack: ny-cgui-people
+        title: Ben Yang
+        meta: First author, Delegate the Details and Cascade
+        portrait: /assets/img/journey/people/ben-yang.jpg
+        portrait_pixel: /assets/img/journey/people/ben-yang.pixel.jpg
+        portrait_alt: Photo of Ben Yang, smiling, in a dark winter jacket in front of snow-covered trees.
+        portrait_credit: "Photo: Columbia CGUI Lab, People"
+        portrait_credit_link: https://graphics.cs.columbia.edu/people
+      - id: tversky
+        kind: person
+        stack: ny-cgui-people
+        title: Barbara Tversky
+        meta: Co-author
+        portrait: /assets/img/journey/people/tversky.jpg
+        portrait_pixel: /assets/img/journey/people/tversky.pixel.jpg
+        portrait_alt: Head-and-shoulders photo of Barbara Tversky, smiling, with dark curly hair, in a red turtleneck and dark jacket.
+        portrait_credit: "Photo: Barbara Tversky | Faculty Profile | Teachers College, Columbia University"
+        portrait_credit_link: https://www.tc.columbia.edu/faculty/bt2158/
+      - id: cascade
+        kind: paper
+        stack: ny-papers
+        title: Cascade
+        meta: Spatial message routing for developers and AI agents
+        stamp: Under review
+        image: /assets/img/publication_preview/cascade_teaser.png
+        image_alt: A spatial routing demonstration showing objects and routing regions in a 3D scene.
+        link: "#paper-yang2027cascade"
+      - id: cascade-eye-tracker
+        kind: artifact
+        medium: cutout
+        attach: cascade
+        title: Eye tracker
+        meta: Tobii eye tracking (120 Hz) in the Cascade study
+        image: /assets/img/journey/artifacts/eye-tracker.png
+        image_alt: A long, thin black eye-tracker bar with dark camera windows at both ends and in the middle, and a cable on its right end.
+        credit: InclusiveGameLab, CC BY-SA 4.0
+        credit_link: https://commons.wikimedia.org/wiki/File:Tobii_Eye_Tracker_1.jpg
+      - id: dungeon
+        kind: project
+        stack: ny-courses
+        title: Dungeon Builder / Crawler
+        meta: Course project · ARCore + Meta Quest
+        dates: Jan – May 2025
+        body: Mobile AR level building with hierarchical placement constraints, played in VR.
+      - id: coms4731
+        kind: course
+        stack: ny-courses
+        title: COMS 4731 Computer Vision I
+        meta: Teaching Assistant
+        dates: Sep – Dec 2025
+      - id: new-york-butler
+        kind: photo
+        title: Butler Library across South Lawn
+        meta: Columbia University
+        image: /assets/img/journey/new-york-butler-library.jpg
+        image_alt: A broad brick-patterned plaza and lawns lead to the long colonnaded facade of Butler Library, with campus buildings on both sides.
+        credit: Marco Almbauer, CC0
+        credit_link: https://commons.wikimedia.org/wiki/File:Butler_Library_(Columbia_University).jpg
+    stacks:
+      - id: ny-papers
+        title: Papers
+      - id: ny-cgui-people
+        title: CGUI & co-authors
+      - id: ny-liinc-people
+        title: LIINC people
+      - id: ny-courses
+        title: Courses
+    threads:
+      - [new-york-place, columbia, studied]
+      - [columbia, cgui, research]
+      - [columbia, liinc, research]
+      - [columbia, coms4731, taught]
+      - [columbia, dungeon, course project]
+      - [columbia, new-york-butler, campus]
+      - [cgui, feiner, lab]
+      - [liinc, sajda, lab]
+      - [liinc, li, lab]
+      - [liinc, olive, project]
+      - [sajda, olive, senior author]
+      - [li, olive, co-first author]
+      - [xichen-he, olive, co-first author]
+      - [xichen-he, delegate, co-author]
+      - [cgui, vr-guidance, poster]
+      - [vr-guidance, bimanual, relative 6DoF poses]
+      - [bimanual, delegate, assembly constraints]
+      - [ben-yang, delegate, first author]
+      - [ben-yang, cascade, first author]
+      - [tversky, delegate, co-author]
+      - [cgui, cascade, project]
+      - [dungeon, delegate, also hierarchical placement]
+
+  - id: evanston
+    name: Evanston, Illinois
+    short: Evanston, IL
+    year: "2026"
+    lat: 42.0565
+    lon: -87.6753
+    start: 2026-06
+    period: Jun 2026 – present
+    current: true
+    tz: America/Chicago
+    headline: Research Intern, SPICE Lab, Northwestern University
+    summary: Research at Northwestern's SPICE Lab on wearable sensing and AI agents that adapt to people and places.
+    docs:
+      - id: evanston-place
+        kind: place
+        title: Evanston, IL
+        meta: 2026 – present
+        body: Where I am now.
+        image: /assets/img/journey/evanston-lighthouse-beach.jpg
+        image_alt: Dune grass and sand in the foreground give way to the calm, pale water of Lake Michigan under an overcast sky.
+        credit: Paul R. Burley, CC BY-SA 4.0
+        credit_link: https://commons.wikimedia.org/wiki/File:Lighthouse_Beach_Evanston_Illinois_2020-0021.jpg
+      - id: spice
+        kind: lab
+        wide: true
+        title: SPICE Lab
+        meta: Research Intern · Northwestern University
+        dates: Jun 2026 – present
+        link: https://spice-lab.org/
+      - id: ahuja
+        kind: person
+        title: Karan Ahuja
+        meta: Advisor
+        link: https://karan-ahuja.com/
+        portrait: /assets/img/journey/people/ahuja.jpg
+        portrait_pixel: /assets/img/journey/people/ahuja.pixel.jpg
+        portrait_alt: Head-and-shoulders photo of Karan Ahuja, with glasses, in a blue button-down shirt.
+        portrait_credit: "Photo: Karan Ahuja (karan-ahuja.com)"
+        portrait_credit_link: https://karan-ahuja.com/
+      - id: sensorclaw
+        kind: project
+        stack: evanston-projects
+        wide: true
+        title: SensorClaw
+        meta: In progress
+        body: Turns a one-sentence request (“Buzz me when I knock the table”) into a personal smartwatch gesture tracker, using a multi-agent LLM pipeline that trains a personal IMU detector.
+      - id: spatial-memory
+        kind: project
+        stack: evanston-projects
+        title: Spatial Memory
+        body: Agent-assisted handoff notes anchored to objects, places, and projects in shared workspaces.
+      - id: eit-imu
+        kind: project
+        stack: evanston-projects
+        title: EIT + IMU Hand Pose
+        meta: Research project · Northwestern University
+        dates: "2026"
+        body: Synchronized wrist EIT and IMU data with motion-capture ground truth for wearable hand-pose estimation.
+      - id: eit-imu-board
+        kind: artifact
+        medium: cutout
+        attach: eit-imu
+        title: IMU sensor board
+        meta: An IMU, the motion sensor behind the wrist data
+        image: /assets/img/journey/artifacts/imu-board.png
+        image_alt: A small square red circuit board with one tiny motion-sensor chip, a row of labelled pins and four mounting holes.
+        credit: SparkFun, CC BY 2.0
+        credit_link: https://commons.wikimedia.org/wiki/File:SparkFun_9DoF-IMU-Breakout_LSM9DS1_13284-02.jpg
+      - id: evanston-university-hall
+        kind: photo
+        title: University Hall
+        meta: Northwestern University
+        image: /assets/img/journey/evanston-university-hall.jpg
+        image_alt: A Victorian Gothic limestone building with pointed towers and a central arched entrance, seen from below against a dramatic sky.
+        credit: Madcoverboy, CC BY-SA 3.0
+        credit_link: https://commons.wikimedia.org/wiki/File:University_Hall_Northwestern.jpg
+      - id: evanston-deering
+        kind: photo
+        title: Deering Library
+        meta: Northwestern University
+        image: /assets/img/journey/evanston-deering-library.jpg
+        image_alt: A Collegiate Gothic stone library with tall arched windows, behind a wide green lawn and spring trees.
+        credit: Madcoverboy, CC BY-SA 3.0
+        credit_link: https://commons.wikimedia.org/wiki/File:Deering_Library_Northwestern.jpg
+      - id: evanston-tech
+        kind: photo
+        title: The Technological Institute plaza in autumn
+        meta: Northwestern University
+        image: /assets/img/journey/evanston-tech-institute.jpg
+        image_alt: Students cross a brick-paved plaza toward the stone entrance of a large building, framed by orange autumn trees.
+        credit: Chris Rycroft, CC BY 2.0
+        credit_link: https://commons.wikimedia.org/wiki/File:Plaza_outside_Northwestern_University_Technological_Institute_(51725809239).jpg
+      - id: next
+        kind: note
+        title: Next stop?
+        meta: PhD, Fall 2027
+        body: Applying to PhD programs now.
+        link: "#phd-applications"
+    stacks:
+      - id: evanston-projects
+        title: Projects
+    threads:
+      - [evanston-place, spice, research]
+      - [spice, ahuja, advisor]
+      - [spice, sensorclaw, project]
+      - [spice, spatial-memory, project]
+      - [evanston-place, eit-imu, research project]
+      - [sensorclaw, eit-imu, also wrist IMU]
+      - [spice, evanston-university-hall, Northwestern]
+      - [evanston-place, next, next]

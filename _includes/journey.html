@@ -1,0 +1,93 @@
+{% comment %} "My Journey": a compact timeline strip, then a split view of two panes side by side, the Map (_includes/journey-map.html,
+assets/js/journey-map.js) and the Board, one detective board per place (assets/js/journey-board.js), all wired together by assets/js/journey.js; any
+document on a board opens in the close-examine view (assets/js/journey-examine.js). Content lives in _data/journey.yml. The panes keep fixed shares of
+the row, the map about a third and the board about two thirds, and never change size on a click (_sass/_journey-layout.scss); "Expand map" opens the
+map in a window instead. Each board is a dark slate with the place's streets drawn on it (assets/img/journey/maps/, from OpenStreetMap; built by
+bin/build_journey_maps.py), its papers grouped under strips of yellow masking tape. The board's own title is a plain sheet of paper held at the top of
+the board by two strips of blue painter's tape (.board-plate inside .board-case): the place name large (the h3, the board's heading), the case file
+number and the period smaller. The stop's summary sits under it (hidden on the mounted board, read by screen readers) and appears in the examine view
+of the place. Each document is drawn by _includes/journey-doc.html (an artifact attached to another document is drawn inside that one). Without
+JavaScript every board is shown in order as plain lists (a stack is a nested list), the timeline links to them, and the Map pane is hidden. {%
+endcomment %} {% assign stops = site.data.journey.stops %}
+<div class="journey" data-journey>
+  <div class="journey-timeline">
+    <ol class="journey-stops" aria-label="Places, oldest first">
+      {% for stop in stops %} {% if stop.year %}{% assign stop_year = stop.year %}{% else %}{% assign stop_year = stop.start | slice: 0, 4 %}{% endif
+      %}
+      <li>
+        <a class="journey-stop{% if stop.current %} journey-stop--current{% endif %}" href="#journey-{{ stop.id }}" data-stop="{{ stop.id }}">
+          <span class="journey-stop-year">{{ stop_year }}</span>
+          <span class="journey-stop-name">{{ stop.short }}</span>
+        </a>
+      </li>
+      {% endfor %}
+    </ol>
+  </div>
+
+  <div class="journey-split" data-journey-split>
+    {% include journey-map.html %}
+    <section class="journey-pane journey-pane--board" id="journey-pane-board" data-journey-pane="board" aria-labelledby="journey-pane-board-label">
+      <div class="journey-pane-bar" hidden>
+        <p class="journey-pane-label" id="journey-pane-board-label">Board</p>
+      </div>
+      <div class="journey-pane-body">
+        <div class="journey-boards" data-journey-boards>
+          {% for stop in stops %} {% capture case_no %}{% if forloop.index < 10 %}0{% endif %}{{ forloop.index }}{% endcapture %}
+          <section class="journey-board" id="journey-{{ stop.id }}" data-stop="{{ stop.id }}" aria-labelledby="journey-{{ stop.id }}-title">
+            {% capture map_path %}/assets/img/journey/maps/{{ stop.id }}.svg{% endcapture %}
+            <div class="board-surface" style="--board-map: url('{{ map_path | relative_url }}')">
+              <header class="board-case" data-case="{{ case_no }}">
+                <div class="board-plate">
+                  <p class="journey-board-case" aria-hidden="true">Case file № {{ case_no }}</p>
+                  <h3 class="journey-board-title" id="journey-{{ stop.id }}-title">{{ stop.name }}</h3>
+                  <p class="journey-board-period">{{ stop.period }} {%- if stop.current %} <span class="journey-board-now">Now</span>{% endif %}</p>
+                  <span class="board-plate-tape" aria-hidden="true"></span>
+                  <span class="board-wear board-wear--plate" aria-hidden="true"></span>
+                </div>
+                {% if stop.summary %}
+                <p class="journey-board-summary">{{ stop.summary }}</p>
+                {% endif %}
+              </header>
+              <ul class="board-docs" aria-label="Documents on the {{ stop.short }} board">
+                {% for doc in stop.docs %} {% if doc.attach %} {% assign host = stop.docs | where: 'id', doc.attach | first %} {% if host %}{%
+                continue %}{% endif %} {% endif %} {% if doc.stack %} {% assign group = stop.docs | where: 'stack', doc.stack | where_exp: 'd',
+                'd.attach == nil' %} {% assign lead = group | first %} {% if lead.id != doc.id %}{% continue %}{% endif %} {% assign stack =
+                stop.stacks | where: 'id', doc.stack | first %}
+                <li class="board-stack" id="board-stack-{{ doc.stack }}" data-stack="{{ doc.stack }}" data-kind="{{ lead.kind }}">
+                  <p class="board-stack-title" id="board-stack-{{ doc.stack }}-title">
+                    {{ stack.title | default: doc.stack }} <span class="board-stack-count">({{ group.size }})</span>
+                  </p>
+                  <ul class="board-stack-docs" aria-labelledby="board-stack-{{ doc.stack }}-title">
+                    {% for item in group %}{% include journey-doc.html doc=item docs=stop.docs %}{% endfor %}
+                  </ul>
+                </li>
+                {% else %} {% include journey-doc.html doc=doc docs=stop.docs %} {% endif %} {% endfor %}
+              </ul>
+            </div>
+            {% assign credit_place = stop.short | default: stop.name | split: ',' | first %}
+            <p class="board-map-credit" title="Streets of {{ credit_place }}: map data © OpenStreetMap contributors">
+              <span class="board-map-credit-place">Streets of {{ credit_place }}:</span>
+              <span class="board-map-credit-source"
+                >map data © <a href="https://www.openstreetmap.org/copyright" rel="noopener">OpenStreetMap contributors</a></span
+              >
+            </p>
+            {% if stop.threads %}
+            <ul class="board-threads visually-hidden" aria-label="Connections on the {{ stop.short }} board">
+              {% for thread in stop.threads %} {% assign from = stop.docs | where: 'id', thread[0] | first %} {% assign to = stop.docs | where: 'id',
+              thread[1] | first %}
+              <li data-from="{{ thread[0] }}" data-to="{{ thread[1] }}" data-label="{{ thread[2] }}">
+                {{ from.title }} → {{ to.title }}: {{ thread[2] }}
+              </li>
+              {% endfor %}
+            </ul>
+            {% endif %}
+          </section>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+  </div>
+  <script type="application/json" data-journey-stops>
+    {{ stops | jsonify }}
+  </script>
+</div>

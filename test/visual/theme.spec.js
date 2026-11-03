@@ -221,7 +221,7 @@ test("the overflow menu survives a momentarily tiny window", async ({ page }) =>
   await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(resolve)));
   await page.setViewportSize({ width: 1366, height: 800 });
   await expect(menu).toBeHidden();
-  await expect(page.locator(".visible-links li")).toHaveCount(4);
+  await expect(page.locator(".visible-links li")).toHaveCount(5);
   expect(errors).toEqual([]);
 });
 

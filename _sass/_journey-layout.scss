@@ -1,0 +1,395 @@
+/* "My Journey" layout (_includes/journey.html, _includes/journey-map.html, assets/js/journey.js):
+   the timeline strip, then a split view of two panes side by side, the Map on the left and the
+   Board on the right, both on screen from the start and never over each other. The panes keep
+   fixed shares of the row (the map about 34%, the board about 66%) and one shared height
+   (--journey-pane-h, the board's own height at its width, set by the controller); a click,
+   focus or a pin never changes either size. The board is laid out at its pane's width; while
+   the window is being resized it is only scaled (a transform on .journey-boards) and laid out
+   again once the width settles. A narrow section (a phone) stacks the panes, the map on top
+   at a fixed height (.journey[data-layout="stack"]). "Expand map" opens the map in a window
+   (_journey-map.scss). The map is styled in _journey-map.scss, the boards in
+   _journey-board.scss. Without JavaScript the Map pane, the panes' bars and the sources line
+   stay hidden (the [hidden] attribute), the boards follow one another and the timeline is a
+   row of in-page links. Night overrides sit at the bottom (the documented exception to the
+   _theme.scss rule). */
+$journey-ui: "Trebuchet MS", Helvetica, sans-serif;
+$journey-serif: "Newsreader", "Iowan Old Style", Georgia, serif;
+
+/* ---------- the section ---------- */
+.journey {
+  display: block;
+}
+
+/* ---------- the timeline ----------
+   One compact row: year over dot over place, joined by a thread. When it does not fit
+   (a phone) it scrolls sideways and the controller keeps the chosen place in view. The
+   controller turns it into tabs; without JavaScript these are in-page links. */
+.journey-timeline {
+  --stops-line: #d8cfb9;
+  --stops-dot: #ffffff;
+  --stops-dot-border: #8d7535;
+  --stops-active: #b3261e;
+  --stops-active-ring: #b3261e2e;
+  --stops-text: #00274c;
+  --stops-muted: #6b7682;
+  --stops-now-bg: #f6edcf;
+  --stops-now-text: #6f5a1f;
+  --stops-hover: #f7f3e8;
+  --stops-focus: #224b8d;
+  // Straight under the "My Journey" heading (there is no intro paragraph), a little apart.
+  margin: 0.3rem 0 0.7rem;
+  // The masthead's clearance: the controller scrolls the strip back to here.
+  scroll-margin-top: 4.75rem;
+}
+.journey-timeline .journey-stops {
+  display: flex;
+  margin: 0;
+  padding: 4px 2px 6px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  list-style: none;
+  scroll-padding-inline: 12px;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+.journey-timeline .journey-stops li {
+  position: relative;
+  flex: 1 0 auto;
+  min-width: 5.75rem;
+  margin: 0;
+  padding: 0;
+  scroll-snap-align: center;
+}
+// The thread: across each item at the dots' height, from the first dot to the last.
+.journey-timeline .journey-stops li::before {
+  content: "";
+  position: absolute;
+  top: calc(4px + 0.95rem + 0.2rem + 6px);
+  right: 0;
+  left: 0;
+  height: 1px;
+  background: var(--stops-line);
+}
+.journey-timeline .journey-stops li:first-child::before {
+  left: 50%;
+}
+.journey-timeline .journey-stops li:last-child::before {
+  right: 50%;
+}
+.journey-timeline .journey-stops li:only-child::before {
+  content: none;
+}
+
+.journey-timeline .journey-stops .journey-stop {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  row-gap: 0.2rem;
+  padding: 4px 0.45rem 5px;
+  border-radius: 6px;
+  color: var(--stops-text);
+  text-align: center;
+  text-decoration: none;
+}
+.journey-timeline .journey-stop::before {
+  content: "";
+  position: relative;
+  z-index: 1;
+  grid-row: 2;
+  grid-column: 1;
+  box-sizing: border-box;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--stops-dot-border);
+  border-radius: 50%;
+  background: var(--stops-dot);
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.journey-timeline .journey-stop-year {
+  grid-row: 1;
+  grid-column: 1;
+  color: var(--stops-muted);
+  font-family: $journey-ui;
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+  line-height: 0.95rem;
+  white-space: nowrap;
+}
+.journey-timeline .journey-stop-name {
+  grid-row: 3;
+  grid-column: 1;
+  font-family: $journey-serif;
+  font-size: 0.86rem;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+.journey-timeline .journey-stops .journey-stop:hover,
+.journey-timeline .journey-stops .journey-stop:focus-visible {
+  background: var(--stops-hover);
+  color: var(--stops-text);
+  text-decoration: none;
+}
+.journey-timeline .journey-stops .journey-stop:focus:not(:focus-visible) {
+  outline: none;
+}
+// Inside the scrolling strip, so the ring is drawn within the link.
+.journey-timeline .journey-stops .journey-stop:focus-visible {
+  outline: 2px solid var(--stops-focus);
+  outline-offset: -2px;
+}
+.journey-timeline .journey-stop:hover .journey-stop-name {
+  text-decoration: underline;
+  text-decoration-color: var(--stops-dot-border);
+  text-underline-offset: 3px;
+}
+
+// Read as "Evanston, IL, now" rather than "Evanston, ILnow" (the alt text after the slash).
+.journey-timeline .journey-stop--current .journey-stop-name::after {
+  content: "now";
+  content: "now" / ", now";
+  display: inline-block;
+  margin-left: 0.35em;
+  padding: 0 0.35em;
+  border-radius: 3px;
+  background: var(--stops-now-bg);
+  color: var(--stops-now-text);
+  font-family: $journey-ui;
+  font-size: 0.58rem;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  line-height: 1.6;
+  text-transform: uppercase;
+  vertical-align: 2px;
+}
+.journey-timeline .journey-stop--current::before {
+  box-shadow: 0 0 0 3px var(--stops-now-bg);
+}
+
+.journey-timeline .journey-stop[aria-selected="true"]::before {
+  border-color: var(--stops-active);
+  background: var(--stops-active);
+  box-shadow: 0 0 0 4px var(--stops-active-ring);
+}
+.journey-timeline .journey-stop[aria-selected="true"] .journey-stop-name {
+  font-weight: 700;
+}
+.journey-timeline .journey-stop[aria-selected="true"] .journey-stop-year {
+  color: var(--stops-active);
+}
+
+/* ---------- the split view ----------
+   Without the controller (no JavaScript, or no globe) it is a plain block holding the boards. */
+.journey-split {
+  --pane-text: #00274c;
+  --pane-muted: #6b7682;
+  --pane-border: #cdd5de;
+  --pane-button: #ffffff;
+  --pane-hover: #f2f5f8;
+  --pane-focus: #224b8d;
+  display: block;
+}
+.journey[data-layout] .journey-split {
+  display: flex;
+  gap: 14px;
+}
+.journey[data-layout="split"] .journey-split {
+  flex-direction: row;
+  align-items: flex-start;
+}
+.journey[data-layout="stack"] .journey-split {
+  flex-direction: column;
+  gap: 12px;
+}
+
+.journey-pane {
+  position: relative;
+  min-width: 0;
+}
+.journey-pane[hidden] {
+  display: none;
+}
+// Fixed shares of the row, out of 100 from a basis of 0 so they are exact. Nothing on the
+// page changes them; only the section's own width does.
+.journey[data-layout="split"] .journey-pane {
+  flex: 34 1 0;
+}
+.journey[data-layout="split"] .journey-pane--board {
+  flex-grow: 66;
+}
+
+/* Each pane's bar: its name ("Map", "Board"); the map's also holds "Expand map", which opens
+   the map in a window. Both bars are one height, so the panes' bodies line up. */
+.journey-pane-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 30px;
+  margin: 0 0 6px;
+}
+.journey-pane-bar[hidden] {
+  display: none;
+}
+.journey .journey-pane-label {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: var(--pane-muted);
+  font-family: $journey-ui;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.journey .journey-pane-expand {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  margin: 0;
+  padding: 0 11px 0 9px;
+  border: 1px solid var(--pane-border);
+  border-radius: 999px;
+  background: var(--pane-button);
+  color: var(--pane-text);
+  font-family: $journey-ui;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+.journey .journey-pane-expand svg {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.6;
+}
+.journey .journey-pane-expand:hover {
+  border-color: var(--pane-text);
+  background: var(--pane-hover);
+}
+.journey .journey-pane-expand:focus:not(:focus-visible) {
+  outline: none;
+}
+.journey .journey-pane-expand:focus-visible {
+  outline: 2px solid var(--pane-focus);
+  outline-offset: 2px;
+}
+
+/* The panes' bodies share one height, side by side. */
+.journey-pane-body {
+  position: relative;
+}
+.journey[data-layout="split"] .journey-pane-body {
+  height: var(--journey-pane-h, auto);
+}
+// The board pane clips the board (laid out at the pane's width; scaled only while the window
+// is being resized).
+.journey[data-layout="split"] .journey-pane--board .journey-pane-body {
+  overflow: hidden;
+  overflow: clip;
+  border-radius: 14px;
+}
+.journey[data-layout] .journey-boards {
+  transition: none;
+}
+.journey[data-layout="split"] .journey-boards {
+  transform-origin: 0 0;
+}
+// One board shows at a time once the controller runs.
+.journey[data-layout] .journey-boards > .journey-board {
+  margin-bottom: 0;
+}
+
+// The map fills its pane: dark space in both themes.
+.journey-pane--map .journey-pane-body {
+  border-radius: 14px;
+  background: #02040a;
+}
+.journey-pane--map .journey-map-figure {
+  height: 100%;
+  transition: none;
+}
+.journey-pane--map .journey-map-frame {
+  height: 100%;
+  aspect-ratio: auto;
+}
+// Stacked (a phone): the map on top at one fixed height; the board under it at full width.
+.journey[data-layout="stack"] .journey-pane--map .journey-pane-body {
+  height: clamp(260px, 42vh, 420px);
+  height: clamp(260px, 42svh, 420px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .journey-timeline .journey-stop::before,
+  .journey .journey-pane-expand {
+    transition: none !important;
+  }
+}
+
+@media print {
+  .journey-pane--map,
+  .journey-pane-bar {
+    display: none !important;
+  }
+  .journey-split {
+    display: block !important;
+  }
+  .journey-pane-body {
+    height: auto !important;
+    overflow: visible !important;
+  }
+  .journey-boards {
+    width: auto !important;
+    transform: none !important;
+  }
+}
+
+@media screen {
+  html[data-theme="dark"] {
+    .journey-timeline {
+      --stops-line: #3a4859;
+      --stops-dot: #1a2430;
+      --stops-dot-border: #d6bc72;
+      --stops-active: #e06a5f;
+      --stops-active-ring: #e06a5f33;
+      --stops-text: #e8eef5;
+      --stops-muted: #9aa7b5;
+      --stops-now-bg: #3b3424;
+      --stops-now-text: #e6cf8e;
+      --stops-hover: #1a2430;
+      --stops-focus: #8fc0f5;
+    }
+    .journey-split {
+      --pane-text: #e8eef5;
+      --pane-muted: #9aa7b5;
+      --pane-border: #3a4859;
+      --pane-button: #16202b;
+      --pane-hover: #1f2b38;
+      --pane-focus: #8fc0f5;
+    }
+    // On the night page the map's dark pane needs a faint rim to stand off it.
+    .journey-pane--map .journey-pane-body {
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);
+    }
+  }
+}

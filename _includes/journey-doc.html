@@ -1,0 +1,114 @@
+{% comment %} One document on a "My Journey" board (_includes/journey.html), as a list item; its kind, medium and scan_kind choose how it looks
+(_sass/_journey-board.scss) and how the close-examine view shows it (assets/js/journey-examine.js). An artifact (kind: artifact) is an object tied to
+the work. medium "cutout" (the default; a legacy "bag" is drawn the same way) is a picture of the object with a transparent background, lying on the
+board under its own shadow; "photo" is a small print. Its name and the rest ride in a caption (.board-artifact-caption) that the board hides and the
+examine view reads; there is no tag, tape or bag. A note is a sticky note, or a notebook page when its medium says so (default: a sticky note for
+"Next stop", else a notebook page). A doc with a scan_kind is a real document: "diploma" (a scan on heavy cream stock), "paper-page" (a paper's first
+page as a stapled printout) or "cover" (a closed, padded diploma cover with a plain typed label and nothing else on it); the scan is the doc's scan
+(or its image when it has no scan), described by scan_alt (or image_alt). Its title and the rest ride on a typed slip under the sheet
+(.board-scan-caption). A person may carry a portrait (portrait, portrait_alt, portrait_credit, portrait_credit_link): a small print paper-clipped to
+the file card (.board-portrait). With a portrait_pixel (a mild pre-baked mosaic, bin/build_journey_pixelated.py) the board, the examine view and the
+JS-free page show that pixelated stand-in; only "Reveal photo" in the examine view shows the photo itself (data-original). Docs with an attach (the id
+of another doc) are drawn inside that document's item, in a nested list after its text, so they move with it on the board and in a spread pile, and
+read in place without JavaScript. Called with doc= (the document) and docs= (all of the stop's docs). Liquid assigns are global, so every variable
+here starts with jd_, and the attached documents come last, after this one's own variables are spent. The text itself is
+_includes/journey-doc-text.html. Every paper (in a scan, its sheet; not an object) starts with an empty .board-wear carrying its folds and handling
+(_journey-board.scss): data-crease, data-lift, data-shift, data-edge and data-age, picked from a hash of the doc's id (the same on every build) among
+those that suit its kind: a letter is folded in three, a print or a diploma's card only waves, a leatherette cover never folds, and stiff or curled
+things never lift a corner. {% endcomment %} {% assign jd = include.doc %} {% assign jd_prefix = jd.link | slice: 0, 1 %} {% if jd_prefix == '/' %}{%
+assign jd_link = jd.link | relative_url %}{% else %}{% assign jd_link = jd.link %}{% endif %} {% if jd.link contains '://' %}{% assign jd_rel =
+'noopener' %}{% else %}{% assign jd_rel = nil %}{% endif %} {% assign jd_medium = jd.medium %} {% if jd.kind == 'artifact' %} {% assign jd_medium =
+jd.medium | default: 'cutout' %} {% if jd_medium == 'bag' %}{% assign jd_medium = 'cutout' %}{% endif %} {% elsif jd.kind == 'note' and jd_medium ==
+nil %} {% if jd.title contains 'Next' %}{% assign jd_medium = 'sticky' %}{% else %}{% assign jd_medium = 'notebook' %}{% endif %} {% endif %} {%
+assign jd_scan = jd.scan_kind %} {% assign jd_scan_src = jd.scan | default: jd.image %} {% assign jd_scan_alt = jd.scan_alt | default: jd.image_alt %}
+{% assign jd_photo = jd.image %} {% if jd_scan and jd_scan != 'cover' and jd.scan == nil %}{% assign jd_photo = nil %}{% endif %} {% assign jd_object
+= false %} {% if jd_scan == nil and jd.kind == 'artifact' and jd.image and jd_medium == 'cutout' %}{% assign jd_object = true %}{% endif %} {% if
+jd_scan == 'cover' or jd_scan_src == nil %}{% assign jd_scan_hidden = 'true' %}{% else %}{% assign jd_scan_hidden = 'false' %}{% endif %} {% assign
+jd_portrait = nil %}{% if jd.kind == 'person' and jd.portrait %}{% assign jd_portrait = jd.portrait %}{% endif %} {% if jd.portrait_alt %}{% assign
+jd_portrait_alt = jd.portrait_alt %}{% else %}{% capture jd_portrait_alt %}Portrait of {{ jd.title }}{% endcapture %}{% endif %} {% if jd_scan %}{%
+assign jd_credit = 'Image' %}{% elsif jd.kind == 'artifact' %}{% assign jd_credit = 'Image' %}{% else %}{% assign jd_credit = 'Photo' %}{% endif %} {%
+assign jd_hash = 5381 %}{% assign jd_chars = jd.id | split: '' %}{% for jd_char in jd_chars %}{% assign jd_ci =
+'abcdefghijklmnopqrstuvwxyz0123456789-_' | split: jd_char | first | size %}{% assign jd_hash = jd_hash | times: 33 | plus: jd_ci | modulo: 1000003
+%}{% endfor %} {% assign jd_wear_kind = jd.kind %}{% if jd_scan %}{% assign jd_wear_kind = jd_scan %}{% elsif jd_medium == 'sticky' or jd_medium ==
+'notebook' %}{% assign jd_wear_kind = jd_medium %}{% elsif jd_photo and jd.kind != 'paper' %}{% assign jd_wear_kind = 'print' %}{% endif %} {% case
+jd_wear_kind %}{% when 'work' %}{% assign jd_creases = 'trifold' %}{% when 'paper', 'paper-page' %}{% assign jd_creases = 'half,corner,trifold,cross'
+%}{% when 'project' %}{% assign jd_creases = 'half,wave,half,corner' %}{% when 'course' %}{% assign jd_creases = 'wave,corner,half,wave' %}{% when
+'person' %}{% assign jd_creases = 'wave,corner,wave,wave' %}{% when 'notebook' %}{% assign jd_creases = 'crumple,wave,crumple,corner' %}{% when
+'place' %}{% assign jd_creases = 'wave,corner,wave,crumple' %}{% when 'education', 'cover' %}{% assign jd_creases = 'none' %}{% else %}{% assign
+jd_creases = 'wave' %}{% endcase %} {% assign jd_crease_list = jd_creases | split: ',' %}{% assign jd_pick = jd_hash | modulo: jd_crease_list.size
+%}{% assign jd_crease = jd_crease_list[jd_pick] %} {% assign jd_lifts = 'none,br,none,bl,br' | split: ',' %}{% assign jd_pick = jd_hash | divided_by:
+4 | modulo: 5 %}{% assign jd_lift = jd_lifts[jd_pick] %}{% assign jd_stiff = 'lab,education,cover,diploma,sticky,award' | split: ',' %}{% if jd_stiff
+contains jd_wear_kind %}{% assign jd_lift = 'none' %}{% endif %} {% assign jd_shift = jd_hash | divided_by: 20 | modulo: 4 %}{% assign jd_edge =
+jd_hash | divided_by: 80 | modulo: 2 %}{% assign jd_age = jd_hash | divided_by: 160 | modulo: 3 %} {% capture jd_wear %}<span
+  class="board-wear"
+  data-crease="{{ jd_crease }}"
+  data-lift="{{ jd_lift }}"
+  data-shift="{{ jd_shift }}"
+  data-edge="{{ jd_edge }}"
+  data-age="{{ jd_age }}"
+  aria-hidden="true"
+></span
+>{% endcapture %}
+<li
+  class="board-doc{% if jd_scan %} board-doc--scan board-scan-doc--{{ jd_scan }}{% else %} board-doc--{{ jd.kind }}{% endif %}{% if jd_medium %} board-medium--{{ jd_medium }}{% endif %}{% if jd_photo and jd_object == false and jd_scan == nil %} board-doc--has-image{% endif %}{% if jd_portrait %} board-doc--has-portrait{% endif %}{% if jd.image_fit == 'contain' %} board-doc--fit-contain{% endif %}{% if jd.attach %} is-attached{% endif %}"
+  id="board-{{ jd.id }}"
+  data-doc="{{ jd.id }}"
+  data-kind="{{ jd.kind }}"
+  data-medium="{{ jd_medium }}"
+  data-scan="{{ jd_scan }}"
+  data-attach="{{ jd.attach }}"
+>
+  {% if jd_scan %}
+  <figure class="board-scan board-scan--{{ jd_scan }}" aria-hidden="{{ jd_scan_hidden }}">
+    {{ jd_wear }} {% if jd_scan == 'cover' %}
+    <span class="board-scan-label">{{ jd.scan_label | default: jd.title }}</span>
+    {% elsif jd.scan_width and jd.scan_height %}
+    <img
+      src="{{ jd_scan_src | relative_url }}"
+      alt="{{ jd_scan_alt }}"
+      width="{{ jd.scan_width }}"
+      height="{{ jd.scan_height }}"
+      {%
+      if
+      jd.scan_large
+      %}data-large="{{ jd.scan_large | relative_url }}"
+      {%
+      endif
+      %}
+      draggable="false"
+      loading="lazy"
+      decoding="async"
+    />
+    {% elsif jd_scan_src %}
+    <img src="{{ jd_scan_src | relative_url }}" alt="{{ jd_scan_alt }}" draggable="false" loading="lazy" decoding="async" />
+    {% endif %}
+  </figure>
+  <div class="board-scan-caption">{% include journey-doc-text.html %}</div>
+  {% elsif jd_object %}
+  <figure class="board-artifact-object">
+    <img src="{{ jd.image | relative_url }}" alt="{{ jd.image_alt }}" draggable="false" loading="lazy" decoding="async" />
+  </figure>
+  <div class="board-artifact-caption">{% include journey-doc-text.html %}</div>
+  {% else %} {{ jd_wear }} {% if jd_portrait %}
+  <figure class="board-portrait">
+    <span class="board-portrait-frame"
+      >{% if jd.portrait_pixel %}<img
+        class="board-private"
+        src="{{ jd.portrait_pixel | relative_url }}"
+        alt="Pixelated until revealed. {{ jd_portrait_alt | strip }}"
+        data-original="{{ jd_portrait | relative_url }}"
+        data-original-alt="{{ jd_portrait_alt | strip }}"
+        draggable="false"
+        loading="lazy"
+        decoding="async"
+      />{% else %}<img src="{{ jd_portrait | relative_url }}" alt="{{ jd_portrait_alt }}" draggable="false" loading="lazy" decoding="async" />{% endif
+      %}</span
+    >
+  </figure>
+  {% endif %} {% include journey-doc-text.html %} {% endif %} {% assign jd_attachments = include.docs | where: 'attach', jd.id %} {% if
+  jd_attachments.size > 0 %}
+  <ul class="board-doc-attached">
+    {% for jd_attached in jd_attachments %} {% include journey-doc.html doc=jd_attached docs=include.docs %} {% endfor %}
+  </ul>
+  {% endif %}
+</li>

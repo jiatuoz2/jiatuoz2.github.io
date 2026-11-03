@@ -1,0 +1,821 @@
+/* Close-examine view of a board document (assets/js/journey-examine.js): a dark, cinematic
+   window in the middle of the screen (min(1080px, 86vw) x min(700px, 82vh); about 94vw x 90vh
+   on a phone), with rounded corners, a faint rim and a deep shadow, over the page, which stays
+   partly visible behind it, dimmed and a little blurred (::backdrop). Its ground has a grain
+   and the board's street map, faint. The same in both site themes (so it needs no night overrides;
+   its colors are set with enough weight to beat the page's night link and heading colors).
+   The text column on the left (kicker, title, details, body, link, credits), the thing itself
+   large on the right under a soft pool of light, turned a little and turnable in 3D, and a
+   filmstrip of the board's documents along the window's bottom. On a phone the thing sits on
+   top, the text under it, the filmstrip a sideways scroller at the bottom. A person's portrait
+   is pixelated as on the board until "Reveal photo" (.examine-reveal) is pressed. All text is at least 4.5:1
+   against the darkest and lightest parts of the backdrop behind it. The papers shown large keep
+   their board styles (_journey-board.scss); only their size and shadow change here, and their
+   wear (.board-wear) swaps to the 1600 px fold maps, loaded only when this view shows one.
+   The light answers the turn (journey-examine.js sets the custom properties on the object):
+   a soft highlight slides across the sheet toward the lamp (--lx, --ly, --spec), the side
+   turned away darkens (--shade), the folds stand out more as it tilts (--rake), its drop
+   shadow shifts (--shadow-x, --shadow-y), and the sheet's edge shows its thickness on the
+   side turned toward the viewer (--edge-x, --edge-y). With reduced motion the light holds
+   still at its resting pose. */
+$examine-serif: "Newsreader", "Iowan Old Style", Georgia, serif;
+$examine-type: "Courier New", Courier, "Nimbus Mono PS", "Liberation Mono", monospace;
+$examine-ui: "Trebuchet MS", "Helvetica Neue", Helvetica, Arial, sans-serif;
+$examine-ease: cubic-bezier(0.2, 0.75, 0.25, 1);
+$examine-textures: "../img/journey/textures";
+
+// The page stays put behind the window (keeping its scrollbar's room, so nothing behind it
+// shifts), and the board's hover tags are put away while it is open; the threads stay.
+html.has-journey-examine {
+  overflow: hidden;
+}
+// Only a page that had a scrollbar keeps its room (journey-examine.js checks), so a page with
+// none does not push the window off centre.
+html.has-journey-examine-gutter {
+  scrollbar-gutter: stable;
+}
+.has-journey-examine .board-tags {
+  visibility: hidden;
+}
+
+.page__content .journey-examine {
+  --ex-text: #eef0f2;
+  --ex-soft: #d3d8de;
+  --ex-muted: #b4bcc5;
+  --ex-accent: #dcb86c;
+  --ex-link: #a7cdfb;
+  --ex-line: rgba(255, 255, 255, 0.16);
+  --ex-focus: #ffd479;
+  position: fixed;
+  inset: 0;
+  box-sizing: border-box;
+  width: 1080px;
+  width: min(1080px, 86vw);
+  height: 700px;
+  height: min(700px, 82vh);
+  max-width: none;
+  max-height: none;
+  margin: auto;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 16px;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 58% 66% at 66% 42%, rgba(70, 84, 100, 0.3), transparent 70%),
+    radial-gradient(ellipse 120% 95% at 50% 45%, #12171d 0%, #080a0d 68%, #030405 100%);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.5),
+    0 2px 6px rgba(0, 0, 0, 0.35),
+    0 24px 60px -12px rgba(0, 0, 0, 0.7),
+    0 60px 140px -30px rgba(0, 0, 0, 0.75);
+  color: var(--ex-text);
+  font-family: $examine-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  overscroll-behavior: contain;
+}
+.page__content .journey-examine:not([open]) {
+  display: none;
+}
+// The page behind: dimmed and a little blurred, still there.
+.page__content .journey-examine::backdrop {
+  background: rgba(6, 9, 13, 0.52);
+  -webkit-backdrop-filter: blur(5px) saturate(0.85);
+  backdrop-filter: blur(5px) saturate(0.85);
+  animation: journey-examine-dim 0.28s ease-out;
+  transition: opacity 0.2s ease-in;
+}
+.page__content .journey-examine.is-closing::backdrop {
+  opacity: 0;
+}
+@keyframes journey-examine-dim {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.page__content .journey-examine .examine-frame {
+  position: relative;
+  box-sizing: border-box;
+  display: grid;
+  height: 100%;
+  grid-template-columns: minmax(14rem, 23rem) minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "back view"
+    "text view"
+    "strip strip";
+  column-gap: clamp(1rem, 2.4vw, 2.2rem);
+  padding: clamp(0.8rem, 1.6vw, 1.25rem) clamp(1rem, 2.2vw, 1.8rem) 0;
+}
+// A vignette over the whole window, for its dark edges.
+.page__content .journey-examine .examine-frame::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 110% 100% at 55% 45%, transparent 55%, rgba(0, 0, 0, 0.55));
+  pointer-events: none;
+}
+// The ground: the board's streets, faint, under a fine grain (both behind everything).
+.page__content .journey-examine .examine-ground {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.page__content .journey-examine .examine-ground::before,
+.page__content .journey-examine .examine-ground::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+.page__content .journey-examine .examine-ground::before {
+  background: var(--examine-map, none) 62% 45% / cover no-repeat;
+  opacity: 0.42;
+  -webkit-mask-image: radial-gradient(ellipse 75% 70% at 60% 45%, #000 30%, transparent 85%);
+  mask-image: radial-gradient(ellipse 75% 70% at 60% 45%, #000 30%, transparent 85%);
+}
+.page__content .journey-examine .examine-ground::after {
+  background: url("#{$examine-textures}/paper-fibre.jpg") 0 0 / 300px 300px repeat;
+  opacity: 0.12;
+  mix-blend-mode: overlay;
+}
+
+/* The text column */
+.page__content .journey-examine .examine-text {
+  position: relative;
+  z-index: 1;
+  grid-area: text;
+  align-self: center;
+  max-height: 100%;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 1rem 0.4rem 1.5rem 0;
+  touch-action: pan-y;
+  scrollbar-width: thin;
+}
+.page__content .journey-examine .examine-text > [hidden] {
+  display: none;
+}
+.page__content .journey-examine .examine-kicker {
+  margin: 0 0 0.7rem;
+  font: 700 0.72rem/1.45 $examine-type;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ex-accent);
+}
+.page__content .journey-examine .examine-title {
+  margin: 0 0 0.55rem;
+  padding: 0;
+  border: 0;
+  font-family: $examine-serif;
+  font-size: clamp(1.5rem, 2.4vw, 2.15rem);
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--ex-text);
+  overflow-wrap: break-word;
+}
+.page__content .journey-examine .examine-title:focus {
+  outline: none;
+}
+.page__content .journey-examine .examine-stamp {
+  display: inline-block;
+  margin: 0 0 0.75rem;
+  padding: 0.15em 0.55em 0.1em;
+  border: 1.5px solid #e2867b;
+  border-radius: 2px;
+  font: 700 0.72rem/1.3 $examine-type;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #f2a196;
+  rotate: -1.5deg;
+}
+.page__content .journey-examine .examine-meta {
+  margin: 0 0 0.35rem;
+  font-size: 1.08rem;
+  font-style: italic;
+  color: var(--ex-soft);
+}
+.page__content .journey-examine .examine-dates {
+  margin: 0 0 0.8rem;
+  font: 0.85rem/1.4 $examine-type;
+  letter-spacing: 0.06em;
+  color: var(--ex-muted);
+}
+.page__content .journey-examine .examine-body p {
+  max-width: 34em;
+  margin: 0 0 0.75rem;
+  font-size: 1.04rem;
+  color: #e3e6ea;
+}
+.page__content .journey-examine .examine-links {
+  margin: 1rem 0 0;
+}
+.page__content .journey-examine a,
+.page__content .journey-examine a:visited {
+  color: var(--ex-link);
+  text-decoration: underline;
+  text-decoration-color: rgba(167, 205, 251, 0.5);
+  text-underline-offset: 0.18em;
+}
+// Ink on the paper shown large stays the paper's own (dark navy on the card), never the
+// window's light link blue.
+.page__content .journey-examine .examine-object a,
+.page__content .journey-examine .examine-object a:visited,
+.page__content .journey-examine .examine-object a:hover {
+  color: var(--board-link, #1f3a5c);
+  text-decoration-color: rgba(31, 58, 92, 0.45);
+}
+.page__content .journey-examine a:hover {
+  color: #cfe3fd;
+  text-decoration-color: currentColor;
+}
+.page__content .journey-examine .examine-link {
+  font: 600 0.95rem/1.4 $examine-ui;
+}
+.page__content .journey-examine .examine-link::after {
+  content: " \2192";
+}
+.page__content .journey-examine .examine-credit {
+  margin-top: 1.2rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--ex-line);
+  font-size: 0.82rem;
+  color: var(--ex-muted);
+}
+.page__content .journey-examine .examine-credit-line {
+  margin: 0 0 0.25rem;
+  font-size: inherit;
+  color: inherit;
+}
+
+/* A person's portrait: larger here, still its pixelated stand-in until revealed; then the
+   photo itself (.board-portrait-original, preloaded over it) fades in. */
+.page__content .journey-examine .examine-paper .board-portrait {
+  width: 40%;
+  margin: 0 0 0.5em 0.9em;
+}
+// Close up the stand-in is only mildly pixelated: never the board's blur.
+.page__content .journey-examine .examine-object .board-private {
+  filter: none;
+  scale: none;
+}
+// The team photo's print holds its photo over the stand-in the same way.
+.page__content .journey-examine .examine-object .board-doc-photo {
+  position: relative;
+}
+.page__content .journey-examine .board-portrait-original {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.22s ease;
+}
+.page__content .journey-examine .examine-object.is-revealed .board-portrait-original {
+  opacity: 1;
+}
+.page__content .journey-examine .examine-reveal {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55em;
+  margin: 0.3rem 0 0.4rem;
+  padding: 0.45rem 0.95rem 0.45rem 0.8rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.page__content .journey-examine .examine-reveal[hidden] {
+  display: none;
+}
+// An eye, struck through while the photo is blurred.
+.page__content .journey-examine .examine-reveal-icon {
+  position: relative;
+  flex: none;
+  box-sizing: border-box;
+  width: 0.8em;
+  height: 0.8em;
+  border: 1.5px solid currentColor;
+  border-radius: 75% 15%;
+  rotate: 45deg;
+}
+.page__content .journey-examine .examine-reveal-icon::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0.26em;
+  height: 0.26em;
+  border-radius: 50%;
+  background: currentColor;
+  translate: -50% -50%;
+}
+.page__content .journey-examine .examine-reveal[aria-pressed="false"] .examine-reveal-icon::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 1.3em;
+  height: 1.5px;
+  background: currentColor;
+  translate: -50% -50%;
+  rotate: 0deg;
+}
+.page__content .journey-examine .examine-reveal[aria-pressed="true"] {
+  border-color: var(--ex-accent);
+  background: rgba(220, 184, 108, 0.16);
+}
+
+/* Buttons: quiet outlines on the dark, a warm ring when focused. */
+.page__content .journey-examine :is(.examine-back, .examine-tool, .examine-step, .examine-reveal) {
+  box-sizing: border-box;
+  margin: 0;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ex-text);
+  font-family: $examine-ui;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+.page__content .journey-examine :is(.examine-back, .examine-tool, .examine-step, .examine-reveal):hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.55);
+}
+.page__content .journey-examine :is(button, a):focus-visible {
+  outline: 2px solid var(--ex-focus);
+  outline-offset: 2px;
+}
+.page__content .journey-examine :is(.examine-tool, .examine-step):disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.page__content .journey-examine .examine-back {
+  position: relative;
+  z-index: 2;
+  grid-area: back;
+  justify-self: start;
+  align-self: start;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  line-height: 1.2;
+}
+
+/* The thing, close up */
+// It keeps to its own area: zoomed in, the thing is clipped there rather than painted over
+// the text, the tools or the filmstrip.
+.page__content .journey-examine .examine-view {
+  position: relative;
+  grid-area: view;
+  display: block;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 12px;
+  perspective: 1600px;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: grab;
+}
+.page__content .journey-examine .examine-view.is-zoomed {
+  cursor: move;
+}
+.page__content .journey-examine .examine-view:active {
+  cursor: grabbing;
+}
+// The pool of light it lies in.
+.page__content .journey-examine .examine-light {
+  position: absolute;
+  inset: 4% 2%;
+  background: radial-gradient(ellipse 48% 44% at 50% 50%, rgba(255, 238, 212, 0.13), transparent 72%);
+  pointer-events: none;
+}
+// Placed at the middle of the stage at its own natural size; the script's transform
+// (translate(-50%, -50%) first) centres it there and scales it to fit.
+.page__content .journey-examine .examine-object {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: block;
+  width: max-content;
+  transform: translate(-50%, -50%);
+  transform-origin: 50% 50%;
+  // A paper's shadow is a box-shadow, not a drop-shadow filter: a filtered layer is drawn at
+  // its own size and then enlarged, which blurs the paper when it is zoomed in.
+  box-shadow:
+    0 2px 2px rgba(0, 0, 0, 0.55),
+    var(--shadow-x, 0px) var(--shadow-y, 22px) 26px rgba(0, 0, 0, 0.6);
+}
+// A cut-out has no rectangle to cast from, so it keeps the filter that follows its outline.
+.page__content .journey-examine .examine-object[data-medium="cutout"] {
+  box-shadow: none;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.55)) drop-shadow(var(--shadow-x, 0px) var(--shadow-y, 22px) 26px rgba(0, 0, 0, 0.6));
+}
+.page__content .journey-examine .examine-object.is-handled {
+  will-change: transform;
+}
+.page__content .journey-examine .examine-object.is-settling {
+  transition: transform 0.36s $examine-ease;
+}
+// The lamp on a paper as it turns (an object keeps its own light): a soft highlight that
+// slides toward the lamp and a shade on the side turned away, in hard-light (lighter than
+// mid grey brightens the sheet, darker darkens it; clear does nothing).
+.page__content .journey-examine .examine-object:not([data-medium="cutout"])::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 70% 62% at var(--lx, 42%) var(--ly, 24%), #{"rgba(255, 251, 242, var(--spec, 0.12))"}, rgba(255, 251, 242, 0) 72%),
+    linear-gradient(var(--shade-dir, 160deg), rgba(0, 0, 0, 0) 36%, #{"rgba(0, 0, 0, var(--shade, 0.12))"});
+  mix-blend-mode: hard-light;
+  pointer-events: none;
+}
+// The sheet's edge, seen when it is turned: a sliver of its thickness on the near side.
+.page__content .journey-examine .examine-object:not([data-medium="cutout"])::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  border-radius: 1px;
+  background: var(--edge-tone, #bcb5a6);
+  translate: var(--edge-x, 0px) var(--edge-y, 0px);
+  pointer-events: none;
+}
+.page__content .journey-examine .examine-object:is([data-scan="cover"], [data-kind="education"]) {
+  --edge-tone: #0d1424;
+}
+.page__content .journey-examine .examine-object[data-kind="lab"] {
+  --edge-tone: #a98f5c;
+}
+.page__content .journey-examine .examine-object[data-kind="note"] {
+  --edge-tone: #c8b869;
+}
+.page__content .journey-examine .examine-object[data-scan="diploma"] {
+  --edge-tone: #d3c7aa;
+}
+// Close up, the folds and the paper's handling come from the large maps, and stand out a
+// little more as the sheet is tilted under the lamp.
+.page__content .journey-examine .board-wear::before {
+  background-image: var(--wear-lift, linear-gradient(transparent, transparent)), var(--crease-hi, var(--crease, none));
+  opacity: calc(var(--crease-o, 0.85) * (0.85 + 0.4 * var(--rake, 0)));
+}
+// A print's gloss follows the lamp too.
+.page__content .journey-examine :is(.board-doc--photo, .board-doc--has-image:not(.board-doc--paper)) .board-doc-photo::after {
+  background:
+    radial-gradient(ellipse 60% 55% at var(--lx, 42%) var(--ly, 24%), #{"rgba(255, 255, 255, calc(var(--spec, 0.12) * 2))"}, rgba(255, 255, 255, 0) 70%),
+    url("#{$examine-textures}/print-luster.jpg") 0 0 / 150px 150px;
+}
+// An object (kind artifact: a cutout or a photographed object) has no model to turn: it lies
+// flat under one soft, still shadow, with none of the paper's moving light or edge.
+.page__content .journey-examine .examine-object.is-rigid {
+  box-shadow:
+    0 2px 2px rgba(0, 0, 0, 0.5),
+    0 18px 24px rgba(0, 0, 0, 0.55);
+}
+.page__content .journey-examine .examine-object.is-rigid[data-medium="cutout"] {
+  box-shadow: none;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.5)) drop-shadow(0 18px 24px rgba(0, 0, 0, 0.55));
+}
+.page__content .journey-examine .examine-object.is-rigid::before,
+.page__content .journey-examine .examine-object.is-rigid::after {
+  content: none;
+  display: none;
+}
+.page__content .journey-examine .examine-view.is-rigid:not(.is-zoomed) {
+  cursor: zoom-in;
+}
+// Sizes before the script fits the thing to the stage (it scales them to fill most of it).
+.page__content .journey-examine .examine-thing {
+  max-width: none;
+  margin: 0;
+  rotate: none;
+  translate: none;
+}
+.page__content .journey-examine .examine-paper {
+  width: 24rem;
+  font-size: 15px;
+}
+.page__content .journey-examine .examine-paper .board-doc-photo img {
+  aspect-ratio: auto;
+  max-height: 34rem;
+  object-fit: contain;
+}
+.page__content .journey-examine .examine-scan {
+  width: 40rem;
+  font-size: 16px;
+}
+.page__content .journey-examine .examine-scan.board-scan--paper-page {
+  width: 30rem;
+}
+.page__content .journey-examine .examine-scan.board-scan--cover {
+  width: 30rem;
+  font-size: 18px;
+}
+.page__content .journey-examine .examine-cutout img {
+  display: block;
+  width: 28rem;
+  max-width: none;
+  height: auto;
+  max-height: 30rem;
+  margin: 0;
+  object-fit: contain;
+  border-radius: 0;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.5));
+}
+.page__content .journey-examine .examine-tools {
+  position: absolute;
+  z-index: 3;
+  right: 0.25rem;
+  bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem;
+  border-radius: 999px;
+  background: rgba(10, 13, 17, 0.72);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 4px 14px -4px rgba(0, 0, 0, 0.6);
+}
+.page__content .journey-examine .examine-tool {
+  min-width: 2.5rem;
+  height: 2.5rem;
+  padding: 0 0.75rem;
+  font-size: 1.05rem;
+  line-height: 1;
+}
+.page__content .journey-examine .examine-reset {
+  font-size: 0.85rem;
+}
+.page__content .journey-examine .examine-zoom-level {
+  min-width: 3.3em;
+  font: 0.8rem/1 $examine-type;
+  text-align: center;
+  color: var(--ex-muted);
+}
+// On a dark pill of its own, so it reads over a light sheet as well as over the dark.
+.page__content .journey-examine .examine-hint {
+  position: absolute;
+  z-index: 3;
+  left: 0.25rem;
+  bottom: 0.95rem;
+  max-width: calc(100% - 17rem);
+  margin: 0;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(8, 10, 13, 0.62);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  font: 0.78rem/1.3 $examine-ui;
+  letter-spacing: 0.03em;
+  color: #d5dbe1;
+  pointer-events: none;
+}
+
+/* The filmstrip */
+.page__content .journey-examine .examine-strip {
+  position: relative;
+  z-index: 1;
+  grid-area: strip;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-width: 0;
+  padding: 0.75rem 0 calc(0.9rem + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--ex-line);
+}
+.page__content .journey-examine .examine-strip[hidden] {
+  display: none;
+}
+.page__content .journey-examine .examine-step {
+  flex: 0 0 auto;
+  width: 2.6rem;
+  height: 2.6rem;
+  padding: 0 0 0.15rem;
+  font-size: 1.6rem;
+  line-height: 1;
+}
+.page__content .journey-examine .examine-film {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  gap: 0.5rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0.35rem 0.25rem;
+  list-style: none;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+}
+.page__content .journey-examine .examine-film-item {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 0;
+}
+.page__content .journey-examine .examine-thumb {
+  position: relative;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 4.6rem;
+  height: 3.3rem;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  background: #f1efe8;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    translate 0.15s ease;
+}
+.page__content .journey-examine .examine-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  border-radius: 0;
+  object-fit: cover;
+  opacity: 0.62;
+  transition: opacity 0.15s ease;
+}
+// A thumbnail of people: the board's strong blur (clipped by the thumbnail's frame).
+.page__content .journey-examine .examine-thumb img.examine-thumb-private {
+  filter: blur(5px) saturate(0.6);
+  scale: 1.2;
+}
+.page__content .journey-examine .examine-thumb:is([data-medium="cutout"], .examine-thumb--scan-diploma, .examine-thumb--scan-paper-page) img {
+  object-fit: contain;
+}
+.page__content .journey-examine .examine-thumb[data-medium="cutout"] {
+  background: radial-gradient(ellipse at 50% 45%, #3a434d, #1b2128);
+}
+.page__content .journey-examine .examine-thumb[data-medium="cutout"] img {
+  padding: 0.2rem;
+  box-sizing: border-box;
+}
+.page__content .journey-examine .examine-thumb-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  padding: 0.2rem 0.3rem;
+  font: 700 0.58rem/1.15 $examine-type;
+  text-align: left;
+  color: #26221c;
+}
+// Each scrap is the color of its paper.
+.page__content .journey-examine .examine-thumb--lab {
+  background: #d6bd88;
+}
+.page__content .journey-examine .examine-thumb--note {
+  background: #eee18f;
+}
+.page__content .journey-examine .examine-thumb--note[data-medium="notebook"] {
+  background: #f8f7f2;
+}
+.page__content .journey-examine :is(.examine-thumb--person, .examine-thumb--course, .examine-thumb--work, .examine-thumb--project) {
+  background: #f8f7f2;
+}
+.page__content .journey-examine :is(.examine-thumb--award, .examine-thumb--scan-diploma) {
+  background: #f0e6cf;
+}
+.page__content .journey-examine :is(.examine-thumb--paper, .examine-thumb--place) {
+  background: #e8e4d8;
+}
+.page__content .journey-examine :is(.examine-thumb--education, .examine-thumb--scan-cover) {
+  background: #1f2b45;
+}
+.page__content .journey-examine :is(.examine-thumb--education, .examine-thumb--scan-cover) .examine-thumb-text {
+  color: #eadcb4;
+}
+.page__content .journey-examine .examine-thumb:hover img {
+  opacity: 0.9;
+}
+.page__content .journey-examine .examine-thumb[aria-current="true"] {
+  border-color: var(--ex-accent);
+  box-shadow: 0 0 0 2px var(--ex-accent);
+  translate: 0 -2px;
+}
+.page__content .journey-examine .examine-thumb[aria-current="true"] img,
+.page__content .journey-examine .examine-thumb:focus-visible img {
+  opacity: 1;
+}
+.page__content .journey-examine .examine-count {
+  flex: 0 0 auto;
+  margin: 0;
+  font: 700 0.85rem/1 $examine-type;
+  letter-spacing: 0.12em;
+  color: var(--ex-text);
+  font-variant-numeric: tabular-nums;
+}
+.page__content .journey-examine .examine-keys {
+  flex: 0 0 auto;
+  margin: 0;
+  font: 0.75rem/1.3 $examine-ui;
+  color: #a3adb7;
+  white-space: nowrap;
+}
+.page__content .journey-examine .examine-keys kbd {
+  display: inline-block;
+  min-width: 1.6em;
+  padding: 0.05em 0.35em;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-bottom-width: 2px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.06);
+  font: inherit;
+  text-align: center;
+  color: var(--ex-text);
+}
+@media (hover: none) {
+  .page__content .journey-examine .examine-keys {
+    display: none;
+  }
+}
+@media (max-width: 1023.98px) {
+  .page__content .journey-examine .examine-keys {
+    display: none;
+  }
+}
+
+/* Phones: nearly the whole screen, still a rounded window. */
+@media (max-width: 699.98px) {
+  .page__content .journey-examine {
+    width: 94vw;
+    height: 90vh;
+    height: 90dvh;
+    border-radius: 14px;
+  }
+}
+
+/* Phones and narrow windows: the thing on top, the text under it, the strip at the bottom. */
+@media (max-width: 759.98px) {
+  .page__content .journey-examine .examine-frame {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(11rem, 44%) minmax(0, 1fr) auto;
+    grid-template-areas:
+      "back"
+      "view"
+      "text"
+      "strip";
+    padding: 0.75rem 0.9rem 0;
+  }
+  .page__content .journey-examine .examine-text {
+    align-self: stretch;
+    padding: 0.6rem 0 1rem;
+  }
+  .page__content .journey-examine .examine-title {
+    font-size: 1.6rem;
+  }
+  .page__content .journey-examine .examine-tools {
+    right: 0;
+    bottom: 0.2rem;
+  }
+  .page__content .journey-examine .examine-hint {
+    display: none;
+  }
+  .page__content .journey-examine .examine-thumb {
+    width: 3.6rem;
+    height: 2.7rem;
+  }
+  .page__content .journey-examine .examine-strip {
+    gap: 0.45rem;
+  }
+  .page__content .journey-examine .examine-step {
+    width: 2.4rem;
+    height: 2.4rem;
+  }
+  .page__content .journey-examine .examine-count {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page__content .journey-examine *,
+  .page__content .journey-examine .examine-object.is-settling {
+    transition: none !important;
+  }
+  .page__content .journey-examine::backdrop {
+    animation: none;
+    transition: none;
+  }
+}
+
+@media print {
+  .page__content .journey-examine {
+    display: none !important;
+  }
+}
