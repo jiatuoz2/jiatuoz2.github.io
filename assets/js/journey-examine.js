@@ -28,10 +28,37 @@
    photo". A real document with a large rendering (data-large) shows the board's image at
    once and swaps in the large one only after it has decoded, so the sheet is never blank.
 
-   Only paper turns. An object (kind artifact: a cutout or a photographed object) has no
-   model to turn: it lies flat under a soft shadow, with no tilt and no moving light; it
-   still zooms (buttons, wheel, pinch) and a drag moves it when zoomed in. Nothing in the
-   view starts the browser's own image drag (draggable=false, dragstart cancelled).
+   An object (kind artifact: a cutout or a photographed object) never turns in CSS: it lies
+   flat under a soft shadow, with no tilt and no moving light; it still zooms (buttons, wheel,
+   pinch) and a drag moves it when zoomed in. An object with a 3D model (data-model, made
+   from a photo of it; _data/journey.yml) opens exactly like one without: its photo cutout,
+   kicker "Object", and nothing of three.js or the model is requested. Beside the zoom
+   buttons it has one more, "See 3D model" (a cube; aria-pressed false). Pressing it brings
+   the photo back to rest and loads the viewer and the model, only then
+   (assets/js/journey-model.js, imported on demand, never with the page; the button reads
+   "Loading 3D model…", aria-disabled and aria-busy, meanwhile), and the model's canvas then
+   fades in over the photo. Its first frame is the photo's picture: the photo's pose (its yml
+   model_yaw and model_pitch), its silhouette fitted to the box of the cutout's opaque pixels
+   (the same size and place), and the fade starts once that frame is on screen and the
+   cutout has come to rest; nothing turns in. The model turns only when handled: a drag
+   turns it (all the way round, and up and down within limits), coasting on when let go, the
+   wheel, a pinch, the buttons and +/- zoom it, a double-click, Reset or 0 put it back, and
+   with the view focused the arrow keys turn it. Meanwhile its kicker reads "Object, 3D model
+   from a photo", a note over the foot of the view says "This 3D model was reconstructed from
+   a photo and may not be accurate." (also the view's accessible description; a model not
+   made from a photo says what it is instead, with its yml model_note and model_kicker, as
+   data-model-note and data-model-kicker: the Pixel Watch's is Google's product model), and the
+   button reads "Show photo" (aria-pressed true): pressing that turns the model back to rest,
+   fades it out over the photo, and disposes it (its WebGL context released). An object with
+   a model keeps room for the note and the buttons under it in either view (it sits a little
+   higher, never under them), so the two views lie on each other. One model is open at a
+   time, and only until the photo is asked for again, the window moves to another document
+   or closes: every document opens on its photo. Without WebGL 2, or if the model fails, has
+   not appeared within MODEL_TIMEOUT or loses its context, the photo stays (or comes back),
+   still and flat, and the button reads "3D model unavailable", aria-disabled (a console
+   warning only). window.__journeyModel (below) compares the open model's silhouette with
+   its cutout's, for the tests and bin/fit_journey_model_pose.js. Nothing in the view starts
+   the browser's own image drag (draggable=false, dragstart cancelled).
 
    It is a modal <dialog> (role dialog, aria-modal, labelled by the title) placed inside the
    journey section so the board's paper styles apply; Tab stays inside it. Without motion
@@ -40,6 +67,8 @@
 (() => {
   const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
   const touchOnly = matchMedia("(hover: none)");
+  // The narrow layout (_journey-examine.scss), where the zoom buttons sit over the view's foot.
+  const narrow = matchMedia("(max-width: 759.98px)");
   const KIND_NAMES = {
     place: "Place",
     education: "School",
@@ -61,6 +90,28 @@
   const ZOOM_MIN = 1;
   const ZOOM_MAX = 2.5;
   const EASE = "cubic-bezier(0.2, 0.75, 0.25, 1)";
+  const MODEL_KIND = "Object, 3D model from a photo";
+  // The 3D button's words, by state, and the note under the model.
+  const MODEL_BUTTON = {
+    photo: "See 3D model",
+    loading: "Loading 3D model…",
+    model: "Show photo",
+    unavailable: "3D model unavailable",
+  };
+  const MODEL_NOTE = "This 3D model was reconstructed from a photo and may not be accurate.";
+  // The 3D viewer, an ES module beside this script, is imported only when "See 3D model" is
+  // pressed; a model that has not appeared within MODEL_TIMEOUT is given up.
+  const MODEL_MODULE = (() => {
+    try {
+      return new URL("journey-model.js", document.currentScript.src).href;
+    } catch (error) {
+      return new URL("/assets/js/journey-model.js", location.href).href;
+    }
+  })();
+  const MODEL_TIMEOUT = 15000;
+  // A model turns this many degrees per pixel dragged, and per arrow key.
+  const ORBIT = { yaw: 0.45, pitch: 0.3 };
+  const NUDGE = { yaw: 15, pitch: 10 };
 
   const sound = (name) => {
     try {
@@ -83,6 +134,58 @@
   const own = (doc, selector) => [...doc.querySelectorAll(selector)].filter((node) => node.closest(".board-doc") === doc);
   const ownOne = (doc, selector) => own(doc, selector)[0] || null;
   const animate = (node, frames, options) => (!reducedMotion.matches && typeof node.animate === "function" ? node.animate(frames, options) : null);
+  // WebGL 2 (three.js needs it), probed once, its context released at once.
+  let webgl = null;
+  const canWebGL = () => {
+    if (webgl === null) {
+      try {
+        const gl = document.createElement("canvas").getContext("webgl2");
+        webgl = Boolean(gl);
+        if (gl) gl.getExtension("WEBGL_lose_context")?.loseContext();
+      } catch (error) {
+        webgl = false;
+      }
+    }
+    return webgl;
+  };
+  // Where a cutout's opaque pixels (alpha at least one half) lie in its picture, as fractions
+  // of it (a cutout keeps a few clear pixels round it, unevenly): read once per picture, the
+  // whole picture until it has loaded.
+  const opaque = new Map();
+  const ALPHA_EDGE = 128;
+  const opaqueBounds = (image) => {
+    const src = image.currentSrc || image.src;
+    const whole = { left: 0, top: 0, right: 1, bottom: 1 };
+    if (opaque.has(src)) return opaque.get(src);
+    if (!image.complete || !image.naturalWidth || !image.naturalHeight) return whole;
+    try {
+      const k = Math.min(1, 640 / Math.max(image.naturalWidth, image.naturalHeight));
+      const w = Math.max(1, Math.round(image.naturalWidth * k));
+      const h = Math.max(1, Math.round(image.naturalHeight * k));
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const paint = canvas.getContext("2d", { willReadFrequently: true });
+      paint.drawImage(image, 0, 0, w, h);
+      const alpha = paint.getImageData(0, 0, w, h).data;
+      let [left, top, right, bottom] = [w, h, -1, -1];
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          if (alpha[(y * w + x) * 4 + 3] < ALPHA_EDGE) continue;
+          left = Math.min(left, x);
+          right = Math.max(right, x);
+          top = Math.min(top, y);
+          bottom = Math.max(bottom, y);
+        }
+      }
+      const bounds = right < 0 ? whole : { left: left / w, top: top / h, right: (right + 1) / w, bottom: (bottom + 1) / h };
+      opaque.set(src, bounds);
+      return bounds;
+    } catch (error) {
+      // A picture the page may not read: its whole box, then.
+      return whole;
+    }
+  };
 
   const linkText = (href) => {
     if (/^#paper-/.test(href)) return "Read about the paper in Publications";
@@ -104,11 +207,32 @@
     const scan = doc.dataset.scan || "";
     const medium = doc.dataset.medium || "";
     const picture = ownOne(doc, ".board-scan img, .board-artifact-object img, .board-doc-photo img");
+    // A 3D model (journey-doc.html: data-model, data-model-size, data-model-yaw,
+    // data-model-pitch, data-model-pitch-min, data-model-fov, and data-model-note and
+    // data-model-kicker for a model not made from a photo), only ever on an object shown by its
+    // cutout.
+    const model = kind === "artifact" && medium !== "photo" && picture ? doc.dataset.model || "" : "";
+    const number = (value) => (value === undefined || value === "" ? null : Number(value));
     return {
       kind,
       scan,
       medium,
+      // How large an object shows, against the window's usual fill (yml scale; a hand-held
+      // device is drawn smaller than a robot). Papers always fill it.
+      scale: kind === "artifact" ? clamp(number(doc.dataset.scale) || 1, 0.3, 1) : 1,
+      // (An object with a model is first shown by its photo, as "Object"; modelKicker while
+      // its model shows.)
       kindName: SCAN_NAMES[scan] || (kind === "artifact" && medium === "photo" ? "Object, photographed" : KIND_NAMES[kind]) || kind,
+      model,
+      modelSize: number(doc.dataset.modelSize),
+      modelYaw: number(doc.dataset.modelYaw),
+      modelPitch: number(doc.dataset.modelPitch),
+      modelPitchMin: number(doc.dataset.modelPitchMin),
+      modelFov: number(doc.dataset.modelFov),
+      // What the note under the model and the kicker say while it shows (yml model_note and
+      // model_kicker; by default, that it was reconstructed from a photo).
+      modelNote: clean(doc.dataset.modelNote) || MODEL_NOTE,
+      modelKicker: clean(doc.dataset.modelKicker) || MODEL_KIND,
       title: clean(titleNode?.textContent),
       href: link?.getAttribute("href") || "",
       rel: link?.getAttribute("rel") || "",
@@ -232,20 +356,40 @@
     const light = element("div", "examine-light", stage);
     light.setAttribute("aria-hidden", "true");
     const object = element("div", "examine-object", stage);
+    // An object's 3D model: its canvas, over the cutout (journey-model.js).
+    const modelHost = element("div", "examine-model", stage);
+    modelHost.setAttribute("aria-hidden", "true");
+    // The buttons over the view's foot: an object's "See 3D model" (only where it has one)
+    // on a pill of its own, then the zoom.
     const tools = element("div", "examine-tools", stage);
-    const zoomOut = element("button", "examine-tool examine-zoom-out", tools, "−");
+    const modelTools = element("div", "examine-tools-pill examine-tools-model", tools);
+    modelTools.hidden = true;
+    const modelToggle = element("button", "examine-tool examine-model-toggle", modelTools);
+    modelToggle.type = "button";
+    modelToggle.setAttribute("aria-pressed", "false");
+    // A cube (to see the model) and a framed picture (to go back to the photo).
+    element("span", "examine-model-icon", modelToggle).innerHTML =
+      '<svg class="examine-model-icon-cube" viewBox="0 0 16 16" focusable="false"><path d="M8 1.6 13.9 5v6L8 14.4 2.1 11V5Z M2.1 5 8 8.4 13.9 5 M8 8.4v6"/></svg>' +
+      '<svg class="examine-model-icon-photo" viewBox="0 0 16 16" focusable="false"><path d="M2 3.2h12v9.6H2Z M2 11l3.6-3.6 2.8 2.8 1.8-1.8L14 12.2"/><circle cx="10.6" cy="6" r="1.1"/></svg>';
+    modelToggle.firstElementChild.setAttribute("aria-hidden", "true");
+    const modelToggleText = element("span", "examine-model-toggle-text", modelToggle, MODEL_BUTTON.photo);
+    const zoomTools = element("div", "examine-tools-pill examine-tools-zoom", tools);
+    const zoomOut = element("button", "examine-tool examine-zoom-out", zoomTools, "−");
     zoomOut.type = "button";
     zoomOut.setAttribute("aria-label", "Zoom out");
-    const level = element("span", "examine-zoom-level", tools, "100%");
+    const level = element("span", "examine-zoom-level", zoomTools, "100%");
     level.setAttribute("aria-hidden", "true");
-    const zoomIn = element("button", "examine-tool examine-zoom-in", tools, "+");
+    const zoomIn = element("button", "examine-tool examine-zoom-in", zoomTools, "+");
     zoomIn.type = "button";
     zoomIn.setAttribute("aria-label", "Zoom in");
-    const reset = element("button", "examine-tool examine-reset", tools, "Reset");
+    const reset = element("button", "examine-tool examine-reset", zoomTools, "Reset");
     reset.type = "button";
     reset.setAttribute("aria-label", "Reset the view");
     const hint = element("p", "examine-hint", stage);
     hint.setAttribute("aria-hidden", "true");
+    // Shown with the 3D model only, and then the view's description.
+    const modelNote = element("p", "examine-model-note", stage, MODEL_NOTE);
+    modelNote.id = "journey-examine-model-note";
 
     const nav = element("nav", "examine-strip", frame);
     nav.setAttribute("aria-label", "Documents on this board");
@@ -283,6 +427,20 @@
       credit,
       stage,
       object,
+      modelHost,
+      modelTools,
+      modelToggle,
+      modelToggleText,
+      modelNote,
+      // The object's model, when it has one (read()), and its state: "photo", "loading",
+      // "model" or "unavailable".
+      modelInfo: null,
+      modelState: "",
+      modelLabel: "",
+      modelJob: null,
+      modelRest: null,
+      leaving: null,
+      viewer: null,
       tools,
       zoomIn,
       zoomOut,
@@ -298,7 +456,8 @@
     };
 
     // The pose: turn (degrees from rest), zoom, pan (px) and the fit of the thing to the stage.
-    const pose = { x: 0, y: 0, zoom: 1, panX: 0, panY: 0, fit: 1 };
+    // lift (px) raises an object with a model above the room kept for its note and buttons.
+    const pose = { x: 0, y: 0, zoom: 1, panX: 0, panY: 0, fit: 1, lift: 0 };
     view.pose = pose;
     const apply = () => {
       // An object has no model to turn: it lies flat, square to the view.
@@ -307,7 +466,7 @@
       const ry = rigid ? 0 : clamp(BASE.y + pose.y, -TURN_LIMIT, TURN_LIMIT);
       const rz = rigid ? 0 : BASE.z;
       // Centred on the stage (the object is positioned at its middle), then panned, turned, scaled.
-      object.style.transform = `translate(-50%, -50%) translate(${round(pose.panX)}px, ${round(pose.panY)}px) rotateX(${round(rx)}deg) rotateY(${round(ry)}deg) rotateZ(${rz}deg) scale(${round(pose.fit * pose.zoom)})`;
+      object.style.transform = `translate(-50%, -50%) translate(${round(pose.panX)}px, ${round(pose.panY + pose.lift)}px) rotateX(${round(rx)}deg) rotateY(${round(ry)}deg) rotateZ(${rz}deg) scale(${round(pose.fit * pose.zoom)})`;
       // The lamp on the sheet as it turns (_journey-examine.scss): a highlight sliding toward
       // the lamp, a shade on the side turned away, the folds standing out as it tilts, its
       // shadow shifting, and its edge showing on the near side. With reduced motion the light
@@ -342,7 +501,11 @@
       zoomOut.disabled = pose.zoom <= ZOOM_MIN + 0.001;
       zoomIn.disabled = pose.zoom >= ZOOM_MAX - 0.001;
       stage.classList.toggle("is-zoomed", pose.zoom > 1.001);
-      if (rigid) {
+      if (view.viewer) {
+        // The model zooms itself (its camera), staying sharp; a drag always turns it.
+        view.viewer.setZoom(pose.zoom);
+        hint.textContent = touchOnly.matches ? "Drag to turn it · pinch to zoom" : "Drag to turn it · scroll to zoom · double-click to reset";
+      } else if (rigid) {
         hint.textContent = touchOnly.matches
           ? "Pinch to zoom · drag to move when zoomed · swipe to browse"
           : "Scroll to zoom · drag to move · double-click to reset";
@@ -380,6 +543,7 @@
     };
     const resetPose = ({ smooth = true } = {}) => {
       Object.assign(pose, { x: 0, y: 0, zoom: 1, panX: 0, panY: 0 });
+      if (view.viewer) view.viewer.reset({ smooth });
       if (smooth && !reducedMotion.matches) {
         object.classList.add("is-settling");
         setTimeout(() => object.classList.remove("is-settling"), 380);
@@ -387,14 +551,75 @@
       apply();
     };
     view.resetPose = resetPose;
-    // The thing is scaled to fill most of the stage, small ones a little enlarged.
-    const fit = () => {
+    // The thing is scaled to fill most of the stage, small ones a little enlarged. In the
+    // narrow layout it keeps clear of the zoom buttons below it (as much above, so it stays
+    // centred), though never smaller than 60% of the stage's height.
+    // An object with a model keeps the foot of the view, from its note (laid out, if unseen,
+    // while the photo shows) down, clear in both views: it fits in the room above, centred
+    // there (lift), so the photo and the model lie in the same place.
+    const restLayout = () => {
       const thing = object.firstElementChild;
-      if (!thing) return;
-      const w = thing.offsetWidth;
-      const h = thing.offsetHeight;
-      if (!w || !h || !stage.clientWidth || !stage.clientHeight) return;
-      pose.fit = Math.min(1.7, (stage.clientWidth * 0.8) / w, (stage.clientHeight * 0.8) / h);
+      const w = thing ? thing.offsetWidth : 0;
+      const h = thing ? thing.offsetHeight : 0;
+      const height = stage.clientHeight;
+      if (!w || !h || !stage.clientWidth || !height) return { scale: 0, lift: 0 };
+      const across = (stage.clientWidth * 0.8) / w;
+      const share = view.scale || 1;
+      if (view.modelInfo && modelNote.offsetParent) {
+        const band = clamp(height - modelNote.offsetTop + 6, 0, height * 0.5);
+        const tall = Math.max(height * 0.45, Math.min(height * 0.8, (height - band) * 0.92));
+        return { scale: Math.min(1.7, across, tall / h) * share, lift: -band / 2 };
+      }
+      const room = narrow.matches && tools.offsetParent ? height - tools.offsetTop + 6 : 0;
+      const tall = Math.max(height * 0.6, Math.min(height * 0.8, height - room * 2));
+      return { scale: Math.min(1.7, across, tall / h) * share, lift: 0 };
+    };
+    // Where a cutout's picture lies at rest, in CSS pixels from the stage's centre: the img's
+    // content box (it is object-fit: contain), wherever the transform has it now.
+    view.posterRect = () => {
+      const image = object.querySelector(".examine-cutout img");
+      const { scale, lift } = restLayout();
+      if (!image || !scale || !image.naturalWidth || !image.naturalHeight || !object.offsetWidth) return null;
+      const outer = object.getBoundingClientRect();
+      const box = image.getBoundingClientRect();
+      if (!outer.width || !outer.height) return null;
+      // The img's box in the object's own (untransformed) pixels ...
+      const across = object.offsetWidth / outer.width;
+      const down = object.offsetHeight / outer.height;
+      const w = box.width * across;
+      const h = box.height * down;
+      const k = Math.min(w / image.naturalWidth, h / image.naturalHeight);
+      const cw = image.naturalWidth * k;
+      const ch = image.naturalHeight * k;
+      const left = (box.left - outer.left) * across + (w - cw) / 2;
+      const top = (box.top - outer.top) * down + (h - ch) / 2;
+      // ... then as the resting transform lays it on the stage.
+      return {
+        image,
+        left: (left - object.offsetWidth / 2) * scale,
+        top: (top - object.offsetHeight / 2) * scale + lift,
+        width: cw * scale,
+        height: ch * scale,
+      };
+    };
+    // The box the cutout's opaque pixels fill at rest (journey-model.js fits the model's
+    // silhouette into it): its size, and its centre from the stage's centre.
+    view.restBox = () => {
+      const rect = view.posterRect();
+      if (!rect) return null;
+      const opaque = opaqueBounds(rect.image);
+      return {
+        width: (opaque.right - opaque.left) * rect.width,
+        height: (opaque.bottom - opaque.top) * rect.height,
+        x: rect.left + ((opaque.left + opaque.right) / 2) * rect.width,
+        y: rect.top + ((opaque.top + opaque.bottom) / 2) * rect.height,
+      };
+    };
+    const fit = () => {
+      const { scale, lift } = restLayout();
+      if (!scale) return;
+      pose.fit = scale;
+      pose.lift = lift;
       clampPan();
       apply();
     };
@@ -405,6 +630,9 @@
     zoomIn.addEventListener("click", () => setZoom(pose.zoom * 1.25));
     zoomOut.addEventListener("click", () => setZoom(pose.zoom / 1.25));
     reset.addEventListener("click", () => resetPose());
+    modelToggle.addEventListener("click", () => {
+      if (state) toggleModel();
+    });
     back.addEventListener("click", () => close());
     // The portrait's photo is shown only on request, and pixelated again just as easily; the
     // object's description says which is showing.
@@ -456,14 +684,18 @@
     const pointers = new Map();
     let gesture = null;
     const startGesture = (event) => {
+      const t0 = performance.now();
       gesture = {
-        mode: pose.zoom > 1.001 ? "pan" : view.rigid ? "still" : "turn",
+        mode: view.viewer ? "orbit" : pose.zoom > 1.001 ? "pan" : view.rigid ? "still" : "turn",
         id: event.pointerId,
         type: event.pointerType,
         x0: event.clientX,
         y0: event.clientY,
-        t0: performance.now(),
+        t0,
         start: { ...pose },
+        // A model's drag: the last point and the pointer's recent speed (px per ms).
+        last: { x: event.clientX, y: event.clientY, t: t0 },
+        speed: { x: 0, y: 0 },
       };
     };
     const spread = () => {
@@ -479,6 +711,7 @@
       } catch (error) {
         // Capture is a nicety.
       }
+      if (view.viewer) view.viewer.stop();
       if (pointers.size === 1) startGesture(event);
       else if (pointers.size === 2) gesture = { mode: "pinch", d0: spread(), z0: pose.zoom };
       object.classList.add("is-handled");
@@ -491,6 +724,18 @@
         return;
       }
       if (event.pointerId !== gesture.id) return;
+      if (gesture.mode === "orbit") {
+        if (!view.viewer) return;
+        const now = performance.now();
+        const mx = event.clientX - gesture.last.x;
+        const my = event.clientY - gesture.last.y;
+        const dt = Math.max(1, now - gesture.last.t);
+        gesture.speed.x = gesture.speed.x * 0.4 + (mx / dt) * 0.6;
+        gesture.speed.y = gesture.speed.y * 0.4 + (my / dt) * 0.6;
+        gesture.last = { x: event.clientX, y: event.clientY, t: now };
+        view.viewer.turn(mx * ORBIT.yaw, my * ORBIT.pitch);
+        return;
+      }
       const dx = event.clientX - gesture.x0;
       const dy = event.clientY - gesture.y0;
       if (gesture.mode === "turn") {
@@ -506,6 +751,10 @@
     const endPointer = (event) => {
       if (!pointers.has(event.pointerId)) return;
       pointers.delete(event.pointerId);
+      // A model let go while still moving coasts on (journey-model.js slows it down).
+      if (gesture && gesture.mode === "orbit" && gesture.id === event.pointerId && event.type === "pointerup" && view.viewer) {
+        if (performance.now() - gesture.last.t < 90) view.viewer.fling(gesture.speed.x * ORBIT.yaw, gesture.speed.y * ORBIT.pitch);
+      }
       if (gesture && (gesture.mode === "turn" || gesture.mode === "still") && gesture.id === event.pointerId && gesture.type !== "mouse") {
         const dx = event.clientX - gesture.x0;
         const dy = event.clientY - gesture.y0;
@@ -570,6 +819,15 @@
 
     dialog.addEventListener("keydown", (event) => {
       if (!state) return;
+      // With the view focused, the arrow keys turn a model instead of browsing.
+      if (view.viewer && document.activeElement === stage && !(event.altKey || event.ctrlKey || event.metaKey)) {
+        const turn = { ArrowLeft: [-NUDGE.yaw, 0], ArrowRight: [NUDGE.yaw, 0], ArrowUp: [0, -NUDGE.pitch], ArrowDown: [0, NUDGE.pitch] }[event.key];
+        if (turn) {
+          event.preventDefault();
+          view.viewer.nudge(...turn);
+          return;
+        }
+      }
       const inFilm = film.contains(document.activeElement);
       switch (event.key) {
         case "Escape":
@@ -665,14 +923,222 @@
     node.textContent = value;
     node.hidden = !value;
   };
+  // How the view and the object name the model for a screen reader: made from a photo, unless
+  // its note says otherwise (then the note, the view's description, says where it came from).
+  const modelPhrase = (info) => (info && info.modelNote !== MODEL_NOTE ? "a 3D model" : "a 3D model made from a photo");
+  const kickerText = (info, context, kindName = info.kindName) =>
+    [context.caseNo && `Case file No. ${context.caseNo}`, context.short || context.place, kindName].filter(Boolean).join(" · ");
+
+  // The 3D button, the kicker, the note and the view's description for the state of the
+  // object's model: "photo" (the photo shows; the button offers the model), "loading",
+  // "model" (the model shows; the button offers the photo back) or "unavailable".
+  const setModelState = (name) => {
+    const { stage, modelToggle } = view;
+    view.modelState = name;
+    const showing = name === "model";
+    modelToggle.setAttribute("aria-pressed", String(showing));
+    view.modelToggleText.textContent = MODEL_BUTTON[name] || MODEL_BUTTON.photo;
+    // aria-disabled rather than disabled, so a press that starts the load keeps its focus.
+    if (name === "loading" || name === "unavailable") modelToggle.setAttribute("aria-disabled", "true");
+    else modelToggle.removeAttribute("aria-disabled");
+    if (name === "loading") modelToggle.setAttribute("aria-busy", "true");
+    else modelToggle.removeAttribute("aria-busy");
+    stage.classList.toggle("is-model-shown", showing);
+    if (showing) {
+      // The view takes focus, for the arrow keys, and says what it holds.
+      stage.tabIndex = 0;
+      stage.setAttribute("aria-label", `The object, ${modelPhrase(view.modelInfo)}: drag or use the arrow keys to turn it`);
+      stage.setAttribute("aria-describedby", view.modelNote.id);
+    } else {
+      if (document.activeElement === stage) modelToggle.focus({ preventScroll: true });
+      stage.removeAttribute("tabindex");
+      stage.setAttribute("aria-label", "The document, close up");
+      stage.removeAttribute("aria-describedby");
+    }
+    if (state && view.modelInfo)
+      fill(view.kicker, kickerText(view.modelInfo, state.context, showing ? view.modelInfo.modelKicker : view.modelInfo.kindName));
+    if (view.modelLabel)
+      view.object.setAttribute("aria-label", showing ? `${view.modelLabel} (shown as ${modelPhrase(view.modelInfo)})` : view.modelLabel);
+  };
+
+  // Puts away the model of the document shown, loading, loaded or fading out: its load is
+  // abandoned, or its viewer disposed (WebGL context released, canvas removed); the view is
+  // the photo's again, at once.
+  const unloadModel = () => {
+    const job = view.modelJob;
+    view.modelJob = null;
+    view.viewer = null;
+    view.modelRest = null;
+    if (view.leaving) {
+      clearTimeout(view.leaving.timer);
+      view.leaving = null;
+    }
+    if (job) {
+      clearTimeout(job.timer);
+      job.controller.abort(new Error("The 3D model was put away"));
+      if (job.viewer) job.viewer.dispose();
+    }
+    const { stage } = view;
+    stage.classList.remove("has-model", "is-model-leaving");
+    delete stage.dataset.model;
+    view.modelHost.replaceChildren();
+  };
+
+  // The model cannot be shown: the photo stays (or comes back), and the button says so.
+  const modelUnavailable = (info, error) => {
+    console.warn(`Journey 3D model unavailable (${info.model}); showing the photo instead.`, error);
+    unloadModel();
+    if (!state || view.modelInfo !== info) return;
+    view.stage.dataset.model = "failed";
+    setModelState("unavailable");
+    view.apply();
+  };
+
+  // "See 3D model": the photo comes back to rest, three.js and the model load (the photo
+  // stays meanwhile), then the model's canvas fades in over it (.has-model,
+  // _journey-examine.scss). The model's first frame is the photo's picture: drawn in the
+  // photo's pose (model_yaw, model_pitch) with its silhouette fitted to the cutout's opaque
+  // box (view.restBox), and the fade starts only once that frame is on screen and the photo
+  // has come to rest (the window's opening, a step along the filmstrip, a reset); nothing
+  // turns. If anything fails, or the model has not appeared within MODEL_TIMEOUT, or its
+  // WebGL context is lost later, the photo stays (modelUnavailable).
+  const loadModel = (info) => {
+    if (!canWebGL()) {
+      modelUnavailable(info, new Error("No WebGL 2"));
+      return;
+    }
+    const job = { controller: new AbortController(), timer: 0, viewer: null };
+    const { signal } = job.controller;
+    view.modelJob = job;
+    view.stage.dataset.model = "loading";
+    setModelState("loading");
+    // The photo goes back to rest (unzoomed, centred) first, as the model will appear.
+    const settled = view.pose.zoom > 1.001 || view.pose.panX || view.pose.panY ? performance.now() + 400 : 0;
+    view.resetPose();
+    const gaveUp = new Promise((resolve, reject) => {
+      signal.addEventListener("abort", () => reject(signal.reason || new Error("The 3D model was put away")), { once: true });
+    });
+    job.timer = setTimeout(() => job.controller.abort(new Error(`No 3D model after ${MODEL_TIMEOUT / 1000} s`)), MODEL_TIMEOUT);
+    const failed = (error) => {
+      if (view.modelJob !== job) return;
+      modelUnavailable(info, error);
+    };
+    // The photo's picture is decoded first, so its opaque box is known when the model is
+    // fitted to it.
+    const poster = view.object.querySelector(".examine-cutout img");
+    const decoded = poster && typeof poster.decode === "function" ? poster.decode().catch(() => {}) : Promise.resolve();
+    Promise.race([
+      Promise.all([import(MODEL_MODULE), decoded]).then(([module]) =>
+        module.mount({
+          host: view.modelHost,
+          url: info.model,
+          sizeM: info.modelSize,
+          yaw: info.modelYaw,
+          pitch: info.modelPitch,
+          pitchMin: info.modelPitchMin,
+          fov: info.modelFov,
+          fitBox: view.restBox,
+          signal,
+          onLost: () => failed(new Error("WebGL context lost")),
+        })
+      ),
+      gaveUp,
+    ]).then(async (viewer) => {
+      if (view.modelJob !== job || !state) {
+        viewer.dispose();
+        if (view.modelJob === job) unloadModel();
+        return;
+      }
+      clearTimeout(job.timer);
+      job.viewer = viewer;
+      // The window's opening, a step along the filmstrip or the reset may still be moving
+      // the photo into place; the model waits for it there.
+      const entrance = view.entrance;
+      if (entrance && entrance.playState === "running") await entrance.finished.catch(() => {});
+      const wait = settled - performance.now();
+      if (wait > 0 && !reducedMotion.matches) await new Promise((resolve) => setTimeout(resolve, wait));
+      if (view.modelJob !== job || !state) return;
+      view.viewer = viewer;
+      view.modelRest = viewer.pose();
+      view.pose.panX = 0;
+      view.pose.panY = 0;
+      view.stage.classList.add("has-model");
+      view.stage.dataset.model = "ready";
+      setModelState("model");
+      view.apply();
+    }, failed);
+  };
+
+  // "Show photo": the model turns back to rest (if it was turned or zoomed), fades out over
+  // the photo, which is there again at once beneath it, and is disposed. Pressed again while
+  // it fades, the model simply stays.
+  const showPhoto = () => {
+    const { viewer, stage } = view;
+    if (!viewer) {
+      unloadModel();
+      setModelState("photo");
+      return;
+    }
+    const rest = view.modelRest || viewer.pose();
+    const now = viewer.pose();
+    const off = Math.abs(((((now.yaw - rest.yaw) % 360) + 540) % 360) - 180);
+    const turned = off > 0.5 || Math.abs(now.pitch - rest.pitch) > 0.5 || Math.abs(now.zoom - 1) > 0.01;
+    view.resetPose();
+    setModelState("photo");
+    if (reducedMotion.matches) {
+      unloadModel();
+      view.apply();
+      return;
+    }
+    const leaving = { timer: 0 };
+    view.leaving = leaving;
+    const fade = () => {
+      if (view.leaving !== leaving) return;
+      stage.classList.remove("has-model");
+      stage.classList.add("is-model-leaving");
+      leaving.timer = setTimeout(() => {
+        if (view.leaving !== leaving) return;
+        unloadModel();
+        view.apply();
+      }, 520);
+    };
+    // (The viewer's reset takes about half a second.)
+    if (turned) leaving.timer = setTimeout(fade, 560);
+    else fade();
+  };
+
+  const toggleModel = () => {
+    const info = view.modelInfo;
+    if (!info) return;
+    if (view.leaving && view.viewer) {
+      // Asked for again while it fades out: it stays, at rest.
+      sound("click");
+      clearTimeout(view.leaving.timer);
+      view.leaving = null;
+      view.stage.classList.remove("is-model-leaving");
+      view.stage.classList.add("has-model");
+      setModelState("model");
+      view.apply();
+    } else if (view.modelState === "photo") {
+      sound("click");
+      loadModel(info);
+    } else if (view.modelState === "model") {
+      sound("click");
+      showPhoto();
+    }
+  };
+
   const render = (direction = 0) => {
-    // Focus on a control about to hide or be replaced (the reveal button, a link) moves to
-    // this item's thumbnail in the filmstrip, so the keys keep working.
-    const lost = [view.reveal, view.links].some((control) => control.contains(document.activeElement));
+    // Focus on a control about to hide or be replaced (the reveal button, the 3D button, a
+    // link, a model's view) moves to this item's thumbnail in the filmstrip, so the keys keep
+    // working.
+    const lost =
+      [view.reveal, view.links, view.modelTools].some((control) => control.contains(document.activeElement)) || document.activeElement === view.stage;
+    unloadModel();
     const doc = state.docs[state.index];
     const info = read(doc);
     const { context } = state;
-    fill(view.kicker, [context.caseNo && `Case file № ${context.caseNo}`, context.short || context.place, info.kindName].filter(Boolean).join(" · "));
+    fill(view.kicker, kickerText(info, context));
     view.title.textContent = info.title || info.kindName;
     fill(view.stamp, info.stamp);
     fill(view.meta, info.meta);
@@ -705,6 +1171,7 @@
     const { node, label } = objectFor(doc, info);
     view.object.replaceChildren(node);
     view.rigid = info.kind === "artifact";
+    view.scale = info.scale;
     view.object.classList.toggle("is-rigid", view.rigid);
     view.stage.classList.toggle("is-rigid", view.rigid);
     view.object.dataset.kind = info.kind;
@@ -725,6 +1192,19 @@
     // a photo to reveal.
     view.reveal.hidden = !node.querySelector(".board-portrait-original");
     view.setRevealed(false);
+    // An object with a model opens on its photo, the 3D button beside the zoom (and the
+    // room for the note kept, so the photo lies where the model will); without WebGL 2 the
+    // button says at once that the model cannot be shown.
+    view.modelInfo = info.model ? info : null;
+    view.modelLabel = info.model ? label : "";
+    if (info.model) view.modelNote.textContent = info.modelNote;
+    view.modelTools.hidden = !info.model;
+    view.stage.classList.toggle("can-model", Boolean(info.model));
+    setModelState("photo");
+    if (info.model && !canWebGL()) {
+      console.warn(`Journey 3D model unavailable (${info.model}): no WebGL 2; showing the photo instead.`);
+      setModelState("unavailable");
+    }
     view.resetPose({ smooth: false });
     view.fit();
     for (const image of node.querySelectorAll("img")) {
@@ -752,7 +1232,7 @@
     }
 
     if (direction) {
-      animate(
+      view.entrance = animate(
         view.object,
         [
           { opacity: 0, translate: `${direction * 56}px 0px` },
@@ -793,6 +1273,10 @@
     if (view.dialog.open) view.dialog.close();
     view.dialog.classList.remove("is-closing");
     document.documentElement.classList.remove("has-journey-examine", "has-journey-examine-gutter");
+    unloadModel();
+    view.modelInfo = null;
+    view.modelLabel = "";
+    setModelState("photo");
     view.object.replaceChildren();
     view.film.replaceChildren();
     view.buttons = [];
@@ -858,7 +1342,7 @@
         ],
         { duration: 280, easing: EASE }
       );
-      animate(
+      view.entrance = animate(
         view.object,
         [
           { opacity: 0, scale: 0.9, translate: "0px 24px" },
@@ -868,6 +1352,106 @@
       );
     }
     view.back.focus({ preventScroll: true });
+  };
+
+  // The cutout's silhouette as it lies at rest, on the same grid as the model's mask()
+  // (journey-model.js): one byte per step x step CSS pixels of the view, 1 where its alpha is
+  // at least one half.
+  const posterMask = (step = 2) => {
+    const rect = view && view.posterRect();
+    if (!rect) return null;
+    const { stage } = view;
+    const cols = Math.max(1, Math.floor(stage.clientWidth / step));
+    const rows = Math.max(1, Math.floor(stage.clientHeight / step));
+    const canvas = document.createElement("canvas");
+    canvas.width = cols;
+    canvas.height = rows;
+    const paint = canvas.getContext("2d", { willReadFrequently: true });
+    paint.drawImage(
+      rect.image,
+      (stage.clientWidth / 2 + rect.left) / step,
+      (stage.clientHeight / 2 + rect.top) / step,
+      rect.width / step,
+      rect.height / step
+    );
+    const rgba = paint.getImageData(0, 0, cols, rows).data;
+    const bits = new Uint8Array(cols * rows);
+    const shade = new Uint8Array(cols * rows);
+    for (let i = 0; i < bits.length; i++) {
+      if (rgba[i * 4 + 3] < ALPHA_EDGE) continue;
+      bits[i] = 1;
+      shade[i] = Math.round(0.2126 * rgba[i * 4] + 0.7152 * rgba[i * 4 + 1] + 0.0722 * rgba[i * 4 + 2]);
+    }
+    return { cols, rows, step, bits, shade };
+  };
+  // How well two pictures' shading agrees where both silhouettes are: the correlation of
+  // their brightness there (-1 to 1; 0 with nothing to compare).
+  const correlation = (a, b) => {
+    let n = 0;
+    let sa = 0;
+    let sb = 0;
+    let saa = 0;
+    let sbb = 0;
+    let sab = 0;
+    for (let i = 0; i < a.bits.length; i++) {
+      if (!(a.bits[i] && b.bits[i])) continue;
+      const x = a.shade[i];
+      const y = b.shade[i];
+      n++;
+      sa += x;
+      sb += y;
+      saa += x * x;
+      sbb += y * y;
+      sab += x * y;
+    }
+    if (n < 2) return 0;
+    const spread = Math.sqrt((saa - (sa * sa) / n) * (sbb - (sb * sb) / n));
+    return spread ? (sab - (sa * sb) / n) / spread : 0;
+  };
+  const pack = (mask) => mask && { cols: mask.cols, rows: mask.rows, step: mask.step, bits: Array.from(mask.bits).join("") };
+  // For the tests and bin/fit_journey_model_pose.js: the open model (once "See 3D model"
+  // has been pressed) against its cutout, in the real viewer. setPose(yaw, pitch) makes a new resting pose (refitted to the cutout as a
+  // yml model_yaw/model_pitch would be, and drawn at once); compare(step, { shading }) gives
+  // the intersection over union of the two silhouettes as they lie now (and, asked, how well
+  // their shading agrees inside both); masks(step) gives both, as strings of 0 and 1, row by
+  // row.
+  window.__journeyModel = {
+    get ready() {
+      return Boolean(view && view.viewer);
+    },
+    pose: () => (view && view.viewer ? view.viewer.pose() : null),
+    setPose(yaw, pitch) {
+      if (!view || !view.viewer) return null;
+      const rest = view.viewer.setRest(yaw, pitch);
+      view.modelRest = { ...rest, zoom: 1 };
+      view.resetPose({ smooth: false });
+      return rest;
+    },
+    compare(step = 2, { shading = false } = {}) {
+      if (!view || !view.viewer) return null;
+      const model = view.viewer.mask(step);
+      const poster = posterMask(step);
+      if (!poster || poster.cols !== model.cols || poster.rows !== model.rows) return null;
+      let both = 0;
+      let either = 0;
+      let inModel = 0;
+      let inPoster = 0;
+      for (let i = 0; i < model.bits.length; i++) {
+        const a = model.bits[i];
+        const b = poster.bits[i];
+        inModel += a;
+        inPoster += b;
+        both += a & b;
+        either += a | b;
+      }
+      const result = { iou: either ? both / either : 0, model: inModel, poster: inPoster, both, either, pose: view.viewer.pose() };
+      if (shading) result.shading = correlation(model, poster);
+      return result;
+    },
+    masks(step = 2) {
+      if (!view || !view.viewer) return null;
+      return { model: pack(view.viewer.mask(step)), poster: pack(posterMask(step)) };
+    },
   };
 
   window.JourneyExamine = {

@@ -1,0 +1,1 @@
+three.js 0.187.0, from https://cdn.jsdelivr.net/npm/three@0.187.0 and the npm tarball (bin/vendor_three.sh).
