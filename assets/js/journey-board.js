@@ -704,8 +704,10 @@
         const artifacts = [...holder.querySelectorAll(":scope > .board-doc[data-doc]")].map((node) => {
           const next = random(hash(`attach:${node.dataset.doc}`));
           const print = node.dataset.medium === "photo";
-          // An object stands about half as wide as its paper; a small print a little less.
-          return { node, share: print ? 0.5 : 0.6, cutout: !print, tilt: (next() - 0.5) * (print ? 10 : 16) };
+          // An object stands about half as wide as its paper; a small print a little less, and a
+          // hand-held device less again (its yml scale, data-scale).
+          const scale = clamp(Number(node.dataset.scale) || 1, 0.3, 1);
+          return { node, share: (print ? 0.5 : 0.6) * scale, cutout: !print, tilt: (next() - 0.5) * (print ? 10 : 16) };
         });
         attachments.push({ item, doc, holder, artifacts });
       }
@@ -758,18 +760,21 @@
         const { node } = artifact;
         let best = null;
         // Full size, or a little smaller where the board is crowded.
-        // An object keeps about the same area whatever its shape: a long, thin one is wider.
+        // An object keeps about the same area whatever its shape: a long, thin one is wider,
+        // and a tall, narrow one (a watch on its band) is no taller than its paper.
         const image = node.querySelector("img");
-        const aspect = image?.naturalWidth ? clamp(image.naturalWidth / image.naturalHeight, 0.3, 16) : 1;
+        const aspect = image?.naturalWidth ? clamp(image.naturalWidth / image.naturalHeight, 0.2, 16) : 1;
         const spread = artifact.cutout ? Math.sqrt(aspect) : 1;
+        const tall = artifact.cutout && aspect < 1 ? box.h * aspect : Infinity;
         for (const size of [1, 0.84, 0.7]) {
-          const w = clamp(box.w * artifact.share * size * spread, 56, Math.min(box.w * 0.92, 210 * scale));
+          const w = clamp(box.w * artifact.share * size * spread, Math.min(56, tall * size), Math.min(box.w * 0.92, 210 * scale, tall * size));
           node.style.width = `${round(w)}px`;
           const h = Math.max(1, node.offsetHeight);
           const area = w * h;
           for (const [fx, gx, fy, gy] of SPOTS) {
-            const x = box.w * fx - w * gx;
-            const y = box.h * fy - h * gy;
+            // Kept on the board: a spot that would hang off its edge is moved in.
+            const x = clamp(box.w * fx - w * gx, bounds.left - box.x, bounds.right - box.x - w);
+            const y = clamp(box.h * fy - h * gy, bounds.top - box.y, bounds.bottom - box.y - h);
             const here = rect(box.x + x, box.y + y, w, h);
             let cost = (area - overlap(here, bounds)) * 40 + (1 - size) * area * 1.2;
             for (const { zone, weight } of local) cost += overlap(here, zone) * weight;

@@ -272,7 +272,7 @@ test("the timeline lists the six places in order and opens on where I am now", a
     await expect(tab(page, id)).toHaveAttribute("aria-controls", `journey-${id}`);
     await expect(board(page, id)).toHaveAttribute("id", `journey-${id}`);
     await expect(board(page, id)).toHaveAttribute("role", "tabpanel");
-    await expect(board(page, id).locator(".journey-board-case")).toHaveText(`Case file № 0${index + 1}`);
+    await expect(board(page, id).locator(".journey-board-case")).toHaveText(`Case file No. 0${index + 1}`);
   }
   await expect(list.locator(".journey-stop--current")).toHaveCount(1);
   await expect(tab(page, "evanston")).toHaveClass(/journey-stop--current/);
@@ -996,7 +996,7 @@ test("threads lie over the papers at rest, on hover and after a paper is opened"
     await clickOwn(page, opener);
     await expect(page.locator("dialog.journey-examine")).toHaveAttribute("open", "");
     await page.keyboard.press("Escape");
-    await expect(page.locator("dialog.journey-examine")).not.toHaveAttribute("open", "");
+    await expect(page.locator("dialog.journey-examine")).not.toHaveAttribute("open", "", { timeout: 20000 });
     await showCork(page, id);
     expect((await stringsOverDocs(page, id)).wrong, `${id} after opening a paper`).toEqual([]);
     if (!touch) {
@@ -1292,7 +1292,7 @@ test("every board carries its title on a sheet held by two strips of blue tape",
     const cork = board(page, id).locator(".board-cork");
     const plate = cork.locator(":scope > .board-case > .board-plate");
     await expect(plate).toBeVisible();
-    await expect(plate.locator(".journey-board-case")).toHaveText(`Case file № 0${index + 1}`);
+    await expect(plate.locator(".journey-board-case")).toHaveText(`Case file No. 0${index + 1}`);
     await expect(plate.locator("h3.journey-board-title")).toContainText(NAMES[id]);
     await expect(plate.locator(".journey-board-period")).toHaveText(/\d{4}/);
     const look = await plate.evaluate((element) => {
@@ -1674,11 +1674,12 @@ test("the team photo is blurred on the board and pixelated in the window until r
   await reveal.click();
   await expect(reveal).toHaveAttribute("aria-pressed", "true");
   await expect(reveal).toHaveAccessibleName("Hide photo");
-  await expect.poll(shown, { timeout: 3000 }).toBe(1);
+  // (WebKit here can take over 2 s to report the end of the 0.22 s fade.)
+  await expect.poll(shown, { timeout: 8000 }).toBe(1);
   await expect(object).toHaveAttribute("aria-label", /^Members of FRC Team 744 .*black bar over their eyes/);
   await reveal.click();
   await expect(reveal).toHaveAttribute("aria-pressed", "false");
-  await expect.poll(shown, { timeout: 3000 }).toBe(0);
+  await expect.poll(shown, { timeout: 8000 }).toBe(0);
   await expect(object).toHaveAttribute("aria-label", /^Pixelated until revealed\. /);
   // The filmstrip carries only the stand-in, under the board's blur.
   const thumb = dialog.locator(".examine-film img[src$='fort-lauderdale-frc-744-team.pixel.jpg']");
@@ -1689,12 +1690,123 @@ test("the team photo is blurred on the board and pixelated in the window until r
   expect(errors).toEqual([]);
 });
 
-test("objects only zoom and move in the examine window; papers turn", async ({ page }) => {
+/* ---------- objects and their 3D models ---------- */
+
+// A small glTF binary for the 3D viewer: a 0.5 x 0.3 x 0.4 box in one grey-blue material,
+// served by page.route (Jekyll serves nothing from test/). Built here, so no binary fixture.
+function boxGlb() {
+  const half = [0.25, 0.15, 0.2];
+  const positions = [];
+  const normals = [];
+  const indices = [];
+  for (let axis = 0; axis < 3; axis++) {
+    for (const sign of [1, -1]) {
+      const u = (axis + 1) % 3;
+      const v = (axis + 2) % 3;
+      const base = positions.length / 3;
+      for (const [a, b] of [
+        [-1, -1],
+        [1, -1],
+        [1, 1],
+        [-1, 1],
+      ]) {
+        const point = [0, 0, 0];
+        point[axis] = sign * half[axis];
+        point[u] = a * half[u];
+        point[v] = b * half[v];
+        positions.push(...point);
+        const normal = [0, 0, 0];
+        normal[axis] = sign;
+        normals.push(...normal);
+      }
+      // Counter-clockwise seen from outside (u x v points along +axis).
+      indices.push(...(sign > 0 ? [0, 1, 2, 0, 2, 3] : [0, 2, 1, 0, 3, 2]).map((index) => base + index));
+    }
+  }
+  const bin = Buffer.concat([
+    Buffer.from(new Float32Array(positions).buffer),
+    Buffer.from(new Float32Array(normals).buffer),
+    Buffer.from(new Uint16Array(indices).buffer),
+  ]);
+  const json = {
+    asset: { version: "2.0", generator: "test/visual/journey.spec.js" },
+    scene: 0,
+    scenes: [{ nodes: [0] }],
+    nodes: [{ mesh: 0 }],
+    meshes: [{ primitives: [{ attributes: { POSITION: 0, NORMAL: 1 }, indices: 2, material: 0 }] }],
+    materials: [{ pbrMetallicRoughness: { baseColorFactor: [0.55, 0.6, 0.68, 1], metallicFactor: 0.1, roughnessFactor: 0.6 } }],
+    buffers: [{ byteLength: bin.length }],
+    bufferViews: [
+      { buffer: 0, byteOffset: 0, byteLength: 288, target: 34962 },
+      { buffer: 0, byteOffset: 288, byteLength: 288, target: 34962 },
+      { buffer: 0, byteOffset: 576, byteLength: 72, target: 34963 },
+    ],
+    accessors: [
+      { bufferView: 0, componentType: 5126, count: 24, type: "VEC3", min: half.map((value) => -value), max: half },
+      { bufferView: 1, componentType: 5126, count: 24, type: "VEC3" },
+      { bufferView: 2, componentType: 5123, count: 36, type: "SCALAR" },
+    ],
+  };
+  let text = Buffer.from(JSON.stringify(json));
+  text = Buffer.concat([text, Buffer.alloc((4 - (text.length % 4)) % 4, 0x20)]);
+  const header = Buffer.alloc(12);
+  header.writeUInt32LE(0x46546c67, 0);
+  header.writeUInt32LE(2, 4);
+  header.writeUInt32LE(12 + 8 + text.length + 8 + bin.length, 8);
+  const chunk = (type, body) => {
+    const head = Buffer.alloc(8);
+    head.writeUInt32LE(body.length, 0);
+    head.writeUInt32LE(type, 4);
+    return Buffer.concat([head, body]);
+  };
+  return Buffer.concat([header, chunk(0x4e4f534a, text), chunk(0x004e4942, bin)]);
+}
+
+const TEST_MODEL = "/assets/models/journey/test-box.glb";
+// three.js, the viewer module, or any model.
+const MODEL_REQUEST = /\/assets\/(vendor\/three\/|js\/journey-model\.js|models\/)|\.glb(\?|$)/;
+// Gives one object on a board the test box as its model (what a model field in
+// _data/journey.yml renders), and takes any model away from the others on that board, so the
+// walk along the filmstrip meets no other model.
+// (delay: ms the model takes to arrive, so the loading state can be seen.)
+async function giveTestModel(page, stop, id, { status = 200, delay = 0 } = {}) {
+  await page.route(`**${TEST_MODEL}`, async (route) => {
+    if (delay) await new Promise((resolve) => setTimeout(resolve, delay));
+    return status === 200 ? route.fulfill({ contentType: "model/gltf-binary", body: boxGlb() }) : route.fulfill({ status, body: "" });
+  });
+  await board(page, stop).evaluate(
+    (section, { id, url }) => {
+      for (const doc of section.querySelectorAll(".board-doc")) {
+        for (const key of ["model", "modelSize", "modelYaw", "modelPitch"]) delete doc.dataset[key];
+        if (doc.dataset.doc === id) {
+          doc.dataset.model = url;
+          doc.dataset.modelSize = "0.3";
+        }
+      }
+    },
+    { id, url: TEST_MODEL }
+  );
+}
+// Takes away an object's model, for the tests of objects without one.
+const takeModel = (page, id) =>
+  page.locator(`#board-${id}`).evaluate((doc) => {
+    for (const key of ["model", "modelSize", "modelYaw", "modelPitch"]) delete doc.dataset[key];
+  });
+// The model's pose, as the viewer writes it on its host (degrees, and the zoom).
+const modelPose = (page) =>
+  page.locator("dialog.journey-examine .examine-model").evaluate((host) => ({
+    yaw: Number(host.dataset.yaw),
+    pitch: Number(host.dataset.pitch),
+    zoom: Number(host.dataset.zoom),
+  }));
+
+test("objects without a model only zoom and move in the examine window; papers turn", async ({ page }) => {
   const errors = watchErrors(page);
   await openJourney(page);
   await tab(page, "fort-lauderdale").click();
   await expectSelected(page, "fort-lauderdale");
   await showCork(page, "fort-lauderdale");
+  await takeModel(page, "westminster-cords");
   const dialog = page.locator("dialog.journey-examine");
   const object = dialog.locator(".examine-object");
   const stage = dialog.locator(".examine-view");
@@ -1718,6 +1830,8 @@ test("objects only zoom and move in the examine window; papers turn", async ({ p
   await page.locator("#board-westminster-cords > .board-doc-open").evaluate((element) => element.click());
   await expect(dialog).toBeVisible();
   await expect(object).toHaveClass(/\bis-rigid\b/);
+  await expect(dialog.locator(".examine-kicker")).not.toContainText("3D");
+  await expect(dialog.locator(".examine-model canvas")).toHaveCount(0);
   expect(await pose()).toMatchObject({ x: 0, y: 0, z: 0 });
   await drag(140, 80);
   expect(await pose()).toMatchObject({ x: 0, y: 0, z: 0, panX: 0, panY: 0 });
@@ -1746,15 +1860,729 @@ test("objects only zoom and move in the examine window; papers turn", async ({ p
   expect(errors).toEqual([]);
 });
 
-test("the hint under an object says it zooms and moves, not turns", async ({ page }, testInfo) => {
+test("the hint under an object without a model says it zooms and moves, not turns", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name.includes("mobile"), "the hint is hidden on a phone");
   await openJourney(page);
   await tab(page, "fort-lauderdale").click();
   await expectSelected(page, "fort-lauderdale");
+  await takeModel(page, "westminster-cords");
   await page.locator("#board-westminster-cords > .board-doc-open").evaluate((element) => element.click());
   const dialog = page.locator("dialog.journey-examine");
   await expect(dialog.locator(".examine-hint")).toHaveText("Scroll to zoom · drag to move · double-click to reset");
   await page.keyboard.press("Escape");
+});
+
+// The examine window's 3D button, its words, and the note under the model.
+const modelToggle = (page) => page.locator("dialog.journey-examine .examine-model-toggle");
+const modelNote = (page) => page.locator("dialog.journey-examine .examine-model-note");
+const NOTE = "This 3D model was reconstructed from a photo and may not be accurate.";
+// The button and the view while the photo shows, with the model on offer.
+async function expectPhotoView(page) {
+  const dialog = page.locator("dialog.journey-examine");
+  const stage = dialog.locator(".examine-view");
+  await expect(modelToggle(page)).toBeVisible();
+  await expect(modelToggle(page)).toHaveText("See 3D model");
+  await expect(modelToggle(page)).toHaveAttribute("aria-pressed", "false");
+  await expect(modelToggle(page)).not.toHaveAttribute("aria-disabled", /./);
+  await expect(modelNote(page)).toBeHidden();
+  await expect(stage).not.toHaveAttribute("aria-describedby", /./);
+  await expect(stage).not.toHaveAttribute("data-model", /./);
+  await expect(dialog.locator(".examine-model canvas")).toHaveCount(0);
+  await expect(dialog.locator(".examine-kicker")).toHaveText(/· Object$/);
+  await expect(dialog.locator(".examine-object img")).toBeVisible();
+  await expect.poll(() => dialog.locator(".examine-object").evaluate((element) => getComputedStyle(element).opacity)).toBe("1");
+}
+
+test("an object with a 3D model opens on its photo, and loads nothing 3D until See 3D model is pressed", async ({ page }, testInfo) => {
+  const errors = watchErrors(page);
+  const loads = [];
+  page.on("request", (request) => {
+    if (MODEL_REQUEST.test(request.url())) loads.push(request.url());
+  });
+  await openJourney(page);
+  await tab(page, "fort-lauderdale").click();
+  await expectSelected(page, "fort-lauderdale");
+  await showCork(page, "fort-lauderdale");
+  await page.waitForTimeout(1000);
+  // Neither three.js, the viewer, nor any model comes with the page ...
+  expect(loads).toEqual([]);
+  test.skip(!(await hasWebGL(page)), "this browser build has no WebGL, so there is no 3D view");
+  await giveTestModel(page, "fort-lauderdale", "westminster-cords", { delay: 1500 });
+  const dialog = page.locator("dialog.journey-examine");
+  const stage = dialog.locator(".examine-view");
+  await page.locator("#board-westminster-cords > .board-doc-open").evaluate((element) => element.click());
+  await expect(dialog).toBeVisible();
+  // ... nor with the window: it opens as an object without one, its photo still and flat,
+  // with the 3D button beside the zoom.
+  await expectPhotoView(page);
+  await expect(dialog.locator(".examine-object")).toHaveClass(/\bis-rigid\b/);
+  await expect(dialog.locator(".examine-object")).not.toHaveAttribute("aria-label", /3D model/);
+  if (!testInfo.project.name.includes("mobile")) {
+    await expect(dialog.locator(".examine-hint")).toHaveText("Scroll to zoom · drag to move · double-click to reset");
+  }
+  // The button sits with the zoom buttons, over the view's foot, and shows a cube.
+  const [toggleBox, zoomBox, stageBox] = await Promise.all([
+    modelToggle(page).boundingBox(),
+    dialog.locator(".examine-zoom-in").boundingBox(),
+    stage.boundingBox(),
+  ]);
+  expect(Math.abs(toggleBox.y + toggleBox.height / 2 - (zoomBox.y + zoomBox.height / 2))).toBeLessThan(4);
+  expect(toggleBox.y + toggleBox.height).toBeLessThanOrEqual(stageBox.y + stageBox.height + 1);
+  await expect(modelToggle(page).locator(".examine-model-icon-cube")).toBeVisible();
+  await page.waitForTimeout(1500);
+  expect(loads).toEqual([]);
+
+  // Pressed: it says it is loading (and is busy) while the photo stays, then the model's
+  // canvas takes the photo's place.
+  await modelToggle(page).click();
+  await expect(modelToggle(page)).toHaveText("Loading 3D model…");
+  await expect(modelToggle(page)).toHaveAttribute("aria-busy", "true");
+  await expect(modelToggle(page)).toHaveAttribute("aria-disabled", "true");
+  await expect(stage).toHaveAttribute("data-model", "loading");
+  await expect(dialog.locator(".examine-object img")).toBeVisible();
+  await expect(modelNote(page)).toBeHidden();
+  await expect(stage).toHaveAttribute("data-model", "ready", { timeout: 30000 });
+  expect(loads.some((url) => /\/vendor\/three\/build\/three\.module\.min\.js$/.test(url))).toBe(true);
+  expect(loads.some((url) => /\/assets\/js\/journey-model\.js$/.test(url))).toBe(true);
+  expect(loads.some((url) => url.endsWith(TEST_MODEL))).toBe(true);
+  await expect(dialog.locator(".examine-model canvas")).toBeVisible();
+  await expect(modelToggle(page)).toHaveText("Show photo");
+  await expect(modelToggle(page)).toHaveAttribute("aria-pressed", "true");
+  await expect(modelToggle(page)).not.toHaveAttribute("aria-busy", /./);
+  await expect(modelToggle(page)).not.toHaveAttribute("aria-disabled", /./);
+  await expect(modelToggle(page).locator(".examine-model-icon-photo")).toBeVisible();
+  // The press kept its focus on the button through the load (where a click focuses a
+  // button: not in Safari).
+  if (!testInfo.project.name.includes("mobile")) await expect(modelToggle(page)).toBeFocused();
+  await expect(dialog.locator(".examine-kicker")).toContainText("Object, 3D model from a photo");
+  if (!testInfo.project.name.includes("mobile")) {
+    await expect(dialog.locator(".examine-hint")).toHaveText("Drag to turn it · scroll to zoom · double-click to reset");
+  }
+  // The note shows (on a phone too) and is the view's description.
+  await expect(modelNote(page)).toBeVisible();
+  await expect(modelNote(page)).toHaveText(NOTE);
+  await expect(stage).toHaveAttribute("aria-label", /3D model made from a photo/);
+  const described = await stage.evaluate((element) => document.getElementById(element.getAttribute("aria-describedby"))?.textContent);
+  expect(described).toBe(NOTE);
+  // It lies over the view's foot, above the buttons, clear of the model (its silhouette, as
+  // drawn), and reads clearly: light text on its dark ground.
+  const noteBox = await modelNote(page).boundingBox();
+  expect(noteBox.y + noteBox.height).toBeLessThanOrEqual(toggleBox.y + 1);
+  expect(noteBox.y).toBeGreaterThan(stageBox.y + stageBox.height * 0.5);
+  const lowest = await page.evaluate(() => {
+    const { model } = window.__journeyModel.masks(2);
+    let row = -1;
+    for (let r = 0; r < model.rows; r++) if (model.bits.slice(r * model.cols, (r + 1) * model.cols).includes("1")) row = r;
+    return (row + 1) * model.step;
+  });
+  expect(lowest, "the model's lowest pixel, above the note").toBeLessThanOrEqual(noteBox.y - stageBox.y);
+  const contrast = await modelNote(page).evaluate((element) => {
+    const channels = (value) => value.match(/[\d.]+/g).map(Number);
+    const luminance = ([r, g, b]) =>
+      [r, g, b]
+        .map((v) => (v / 255 <= 0.03928 ? v / 255 / 12.92 : ((v / 255 + 0.055) / 1.055) ** 2.4))
+        .reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0);
+    const style = getComputedStyle(element);
+    const text = luminance(channels(style.color));
+    // Its ground, at its most transparent, over the lightest the window behind it can be.
+    const [r, g, b, a] = channels(style.backgroundColor);
+    const ground = luminance([r * a + 255 * 0.12 * (1 - a), g * a + 255 * 0.12 * (1 - a), b * a + 255 * 0.12 * (1 - a)]);
+    return (Math.max(text, ground) + 0.05) / (Math.min(text, ground) + 0.05);
+  });
+  expect(contrast).toBeGreaterThan(4.5);
+  await page.keyboard.press("Escape");
+  expect(errors).toEqual([]);
+});
+
+test("the 3D model turns, zooms and resets; Show photo and every move or close put it away", async ({ page }, testInfo) => {
+  const errors = watchErrors(page);
+  const loads = [];
+  page.on("request", (request) => {
+    if (MODEL_REQUEST.test(request.url())) loads.push(request.url());
+  });
+  // Reduced motion: no coasting, no eased turns and instant swaps, so every pose is exact.
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await openJourney(page);
+  await tab(page, "fort-lauderdale").click();
+  await expectSelected(page, "fort-lauderdale");
+  await showCork(page, "fort-lauderdale");
+  test.skip(!(await hasWebGL(page)), "this browser build has no WebGL, so there is no 3D view");
+  await giveTestModel(page, "fort-lauderdale", "westminster-cords");
+  // The map is up first, so the canvases counted are all there are.
+  await mapReady(page);
+  const canvases = await page.locator("canvas").count();
+  const dialog = page.locator("dialog.journey-examine");
+  const stage = dialog.locator(".examine-view");
+  const host = dialog.locator(".examine-model");
+  await page.locator("#board-westminster-cords > .board-doc-open").evaluate((element) => element.click());
+  await expect(dialog).toBeVisible();
+  await expectPhotoView(page);
+  await modelToggle(page).click();
+  await expect(stage).toHaveAttribute("data-model", "ready", { timeout: 30000 });
+  await expect(host.locator("canvas")).toHaveCount(1);
+  await expect(host.locator("canvas")).toBeVisible();
+  // The model has taken the photo's place, and says what it is.
+  await expect.poll(() => dialog.locator(".examine-object").evaluate((element) => getComputedStyle(element).opacity)).toBe("0");
+  await expect(dialog.locator(".examine-object")).toHaveAttribute("aria-label", /3D model made from a photo/);
+  await expect(stage).toHaveAttribute("tabindex", "0");
+  // Something is drawn: the box, lit, stands out from the dark window around it.
+  const { PNG } = require("pngjs");
+  const shot = PNG.sync.read(await stage.screenshot());
+  const brightness = (fx, fy, size) => {
+    let sum = 0;
+    let count = 0;
+    for (let y = Math.round(shot.height * fy - size); y < shot.height * fy + size; y++) {
+      for (let x = Math.round(shot.width * fx - size); x < shot.width * fx + size; x++) {
+        const i = (y * shot.width + x) * 4;
+        sum += (shot.data[i] + shot.data[i + 1] + shot.data[i + 2]) / 3;
+        count++;
+      }
+    }
+    return sum / count;
+  };
+  const box = await stage.boundingBox();
+  const fy = await page.evaluate(() => {
+    const { model } = window.__journeyModel.masks(2);
+    let first = -1;
+    let last = -1;
+    for (let r = 0; r < model.rows; r++) {
+      if (!model.bits.slice(r * model.cols, (r + 1) * model.cols).includes("1")) continue;
+      if (first < 0) first = r;
+      last = r;
+    }
+    return (first + last + 1) / 2 / model.rows;
+  });
+  expect(brightness(0.5, fy, 6)).toBeGreaterThan(brightness(0.06, 0.08, 6) + 15);
+
+  const rest = await modelPose(page);
+  expect(rest.zoom).toBe(1);
+  // A drag turns it round and tips it up; the photo itself never turns.
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height * fy;
+  const drag = async (dx, dy) => {
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x + dx, y + dy, { steps: 10 });
+    await page.mouse.up();
+  };
+  // (The viewer writes its pose when it next draws, which can lag a gesture, so each read
+  // after one waits for it.)
+  await drag(200, 60);
+  await expect.poll(async () => (await modelPose(page)).yaw - rest.yaw, { timeout: 10000 }).toBeGreaterThan(60);
+  await expect.poll(async () => (await modelPose(page)).pitch - rest.pitch, { timeout: 10000 }).toBeGreaterThan(8);
+  const turned = await modelPose(page);
+  expect(await dialog.locator(".examine-object").evaluate((element) => /rotate[XY]\((?!0deg)/.test(element.style.transform))).toBe(false);
+  // It turns all the way round, but only so far up (short of straight down on it) and never
+  // below the table.
+  await drag(0, 250);
+  await expect.poll(async () => (await modelPose(page)).pitch, { timeout: 10000 }).toBe(75);
+  await drag(0, -200);
+  await drag(0, -200);
+  await expect.poll(async () => (await modelPose(page)).pitch, { timeout: 10000 }).toBe(0);
+  await drag(-250, 0);
+  await drag(-250, 0);
+  await expect.poll(async () => turned.yaw - (await modelPose(page)).yaw, { timeout: 10000 }).toBeGreaterThan(180);
+  // The zoom buttons zoom it (its camera), and the wheel too.
+  await dialog.getByRole("button", { name: "Zoom in", exact: true }).click();
+  await expect.poll(async () => (await modelPose(page)).zoom).toBe(1.25);
+  if (!testInfo.project.name.includes("mobile")) {
+    await page.mouse.move(x, y);
+    await page.mouse.wheel(0, -240);
+    await expect.poll(async () => (await modelPose(page)).zoom).toBeGreaterThan(1.3);
+  }
+  // With the view focused, the arrow keys turn it and do not browse.
+  const title = await dialog.locator("#journey-examine-title").textContent();
+  await stage.focus();
+  const yaw = (await modelPose(page)).yaw;
+  await page.keyboard.press("ArrowRight");
+  await expect.poll(async () => (await modelPose(page)).yaw).toBeCloseTo(yaw + 15, 0);
+  await page.keyboard.press("ArrowDown");
+  await expect(dialog.locator("#journey-examine-title")).toHaveText(title);
+  // A double-click puts it back at rest, by the shortest way round.
+  await stage.dblclick();
+  await expect
+    .poll(async () => {
+      const pose = await modelPose(page);
+      return { yaw: Math.round(((((pose.yaw - rest.yaw) % 360) + 540) % 360) - 180), pitch: pose.pitch, zoom: pose.zoom };
+    })
+    .toEqual({ yaw: 0, pitch: rest.pitch, zoom: 1 });
+  await expect(dialog.locator(".examine-zoom-level")).toHaveText("100%");
+
+  // Show photo: the photo is back and the model disposed (its canvas gone), turned or not.
+  await drag(120, 0);
+  await modelToggle(page).click();
+  await expectPhotoView(page);
+  await expect(stage).not.toHaveAttribute("tabindex", /./);
+  await expect(dialog.locator(".examine-object")).not.toHaveAttribute("aria-label", /3D model/);
+  await expect(dialog.locator("canvas")).toHaveCount(0);
+  expect(await page.locator("canvas").count()).toBe(canvases);
+  // Pressed again, it comes back (from the browser's cache).
+  await modelToggle(page).click();
+  await expect(stage).toHaveAttribute("data-model", "ready", { timeout: 30000 });
+  await expect(host.locator("canvas")).toHaveCount(1);
+  expect(await modelPose(page)).toMatchObject({ yaw: rest.yaw, pitch: rest.pitch, zoom: 1 });
+
+  // Walking the filmstrip puts the model away; coming back, the photo shows again and
+  // nothing loads until the button is pressed.
+  const away = (await dialog.locator(".examine-next").isDisabled()) ? "Previous document" : "Next document";
+  const back = away === "Next document" ? "Previous document" : "Next document";
+  await dialog.getByRole("button", { name: away, exact: true }).click();
+  await expect(host.locator("canvas")).toHaveCount(0);
+  await expect(stage).not.toHaveAttribute("data-model", /./);
+  await expect(stage).not.toHaveAttribute("tabindex", /./);
+  await expect(modelToggle(page)).toBeHidden();
+  await expect(modelNote(page)).toBeHidden();
+  const loaded = loads.filter((url) => url.endsWith(TEST_MODEL)).length;
+  await dialog.getByRole("button", { name: back, exact: true }).click();
+  await expectPhotoView(page);
+  await page.waitForTimeout(1000);
+  expect(loads.filter((url) => url.endsWith(TEST_MODEL)).length).toBe(loaded);
+  await expect(dialog.locator(".examine-model canvas")).toHaveCount(0);
+  // Closing with the model showing lets go of it: no canvas left behind, the map's WebGL
+  // still alive, and the next opening is the photo's.
+  await modelToggle(page).click();
+  await expect(stage).toHaveAttribute("data-model", "ready", { timeout: 30000 });
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(dialog.locator("canvas")).toHaveCount(0);
+  expect(await page.locator("canvas").count()).toBe(canvases);
+  await mapReady(page);
+  expect(
+    await mapFigure(page)
+      .locator("canvas.maplibregl-canvas")
+      .evaluate((canvas) => {
+        const gl = canvas.getContext("webgl2") || canvas.getContext("webgl");
+        return Boolean(gl) && !gl.isContextLost();
+      })
+  ).toBe(true);
+  await page.locator("#board-westminster-cords > .board-doc-open").evaluate((element) => element.click());
+  await expect(dialog).toBeVisible();
+  await expectPhotoView(page);
+  await page.keyboard.press("Escape");
+  expect(errors).toEqual([]);
+});
+
+test("the 3D button works from the keyboard: Enter shows the model, Space the photo again", async ({ page }, testInfo) => {
+  const errors = watchErrors(page);
+  await openJourney(page);
+  await tab(page, "fort-lauderdale").click();
+  await expectSelected(page, "fort-lauderdale");
+  test.skip(!(await hasWebGL(page)), "this browser build has no WebGL, so there is no 3D view");
+  await giveTestModel(page, "fort-lauderdale", "westminster-cords");
+  const dialog = page.locator("dialog.journey-examine");
+  const stage = dialog.locator(".examine-view");
+  await page.locator("#board-westminster-cords > .board-doc-open").evaluate((element) => element.click());
+  await expect(dialog).toBeVisible();
+  await expectPhotoView(page);
+  // Tab reaches it, inside the window (on a desktop; a phone has no Tab key).
+  await expect(dialog.locator(".examine-back")).toBeFocused();
+  if (!testInfo.project.name.includes("mobile")) {
+    let reached = false;
+    for (let i = 0; i < 40 && !reached; i++) {
+      await page.keyboard.press("Tab");
+      reached = await modelToggle(page).evaluate((element) => document.activeElement === element);
+    }
+    expect(reached, "Tab reaches the 3D button").toBe(true);
+  } else await modelToggle(page).focus();
+  await page.keyboard.press("Enter");
+  await expect(stage).toHaveAttribute("data-model", "ready", { timeout: 30000 });
+  await expect(modelToggle(page)).toHaveAttribute("aria-pressed", "true");
+  await expect(modelToggle(page)).toBeFocused();
+  await expect(modelNote(page)).toBeVisible();
+  await page.keyboard.press("Space");
+  await expectPhotoView(page);
+  await expect(modelToggle(page)).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  expect(errors).toEqual([]);
+});
+
+test("the 3D model appears at rest, never turns by itself, and coasts when flung, then stops", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name.includes("mobile"), "the mouse fling is a desktop gesture");
+  const errors = watchErrors(page);
+  await openJourney(page);
+  await tab(page, "fort-lauderdale").click();
+  await expectSelected(page, "fort-lauderdale");
+  test.skip(!(await hasWebGL(page)), "this browser build has no WebGL, so there is no 3D view");
+  await giveTestModel(page, "fort-lauderdale", "westminster-cords");
+  const dialog = page.locator("dialog.journey-examine");
+  const stage = dialog.locator(".examine-view");
+  await page.locator("#board-westminster-cords > .board-doc-open").evaluate((element) => element.click());
+  await modelToggle(page).click();
+  await expect(stage).toHaveAttribute("data-model", "ready", { timeout: 30000 });
+  // Its first frame is already the resting pose (the test box's default), with no turn-in,
+  // and it stays there (no spin of its own). In software rendering a frame can take over
+  // half a second, so it is called still only after a long quiet spell.
+  const rest = await modelPose(page);
+  expect(rest).toMatchObject({ yaw: -20, pitch: 16, zoom: 1 });
+  await page.waitForTimeout(2000);
+  expect(await modelPose(page)).toEqual(rest);
+  const settled = async () => {
+    const before = await modelPose(page);
+    await page.waitForTimeout(1500);
+    const after = await modelPose(page);
+    return before.yaw === after.yaw && before.pitch === after.pitch;
+  };
+  // A quick flick: it goes on turning after the pointer is let go, then stops.
+  const box = await stage.boundingBox();
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+  // (Sent in the page, 12 ms apart and let go at once, so the flick keeps its own pace: the
+  // mouse's events each wait for a frame, which software rendering can take a fifth of a
+  // second to draw, and a pointer let go that long after it last moved has stopped.)
+  await stage.evaluate(
+    async (element, { x, y }) => {
+      const send = (type, at) =>
+        element.dispatchEvent(
+          new PointerEvent(type, {
+            bubbles: true,
+            cancelable: true,
+            pointerId: 7,
+            pointerType: "mouse",
+            isPrimary: true,
+            button: 0,
+            buttons: type === "pointerup" ? 0 : 1,
+            clientX: at,
+            clientY: y,
+          })
+        );
+      send("pointerdown", x);
+      for (let step = 1; step <= 4; step++) {
+        await new Promise((resolve) => setTimeout(resolve, 12));
+        send("pointermove", x + 40 * step);
+      }
+      send("pointerup", x + 160);
+    },
+    { x, y }
+  );
+  // 160 px turns it 72 degrees; it coasts on past that, but by no more than about a third
+  // of a turn.
+  await expect.poll(async () => (await modelPose(page)).yaw - rest.yaw, { timeout: 10000 }).toBeGreaterThan(75);
+  await expect.poll(settled, { timeout: 20000 }).toBe(true);
+  expect((await modelPose(page)).yaw - rest.yaw).toBeLessThan(72 + 130);
+  await page.keyboard.press("Escape");
+  expect(errors).toEqual([]);
+});
+
+// A cutout of the test box as a product photo shows it in a given pose: its outline seen from
+// far off (orthographic), with the viewer's conventions (yaw turns it on its turntable, pitch
+// looks down on it), filled in grey and set in uneven clear margins, as a real cutout is.
+// Drawn in the page, as a PNG data URL.
+const boxPoster = (page, { yaw, pitch }) =>
+  page.evaluate(
+    ({ yaw, pitch }) => {
+      const half = [0.25, 0.15, 0.2];
+      const turn = (yaw * Math.PI) / 180;
+      const tilt = (pitch * Math.PI) / 180;
+      const points = [];
+      for (const sx of [-1, 1]) {
+        for (const sy of [-1, 1]) {
+          for (const sz of [-1, 1]) {
+            const [px, py, pz] = [sx * half[0], sy * half[1], sz * half[2]];
+            const x = px * Math.cos(turn) + pz * Math.sin(turn);
+            const z = -px * Math.sin(turn) + pz * Math.cos(turn);
+            points.push([x, -(py * Math.cos(tilt) - z * Math.sin(tilt))]);
+          }
+        }
+      }
+      // Its outline: the convex hull of the corners (monotone chain).
+      points.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+      const cross = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+      const chain = (list) => {
+        const out = [];
+        for (const point of list) {
+          while (out.length >= 2 && cross(out[out.length - 2], out[out.length - 1], point) <= 0) out.pop();
+          out.push(point);
+        }
+        return out.slice(0, -1);
+      };
+      const hull = [...chain(points), ...chain([...points].reverse())];
+      const left = Math.min(...hull.map((point) => point[0]));
+      const top = Math.min(...hull.map((point) => point[1]));
+      const k = 560 / (Math.max(...hull.map((point) => point[0])) - left);
+      const margin = { left: 24, right: 96, top: 12, bottom: 64 };
+      const canvas = document.createElement("canvas");
+      canvas.width = 560 + margin.left + margin.right;
+      canvas.height = Math.round((Math.max(...hull.map((point) => point[1])) - top) * k + margin.top + margin.bottom);
+      const paint = canvas.getContext("2d");
+      const shade = paint.createLinearGradient(0, 0, canvas.width, canvas.height);
+      shade.addColorStop(0, "#9aa3ad");
+      shade.addColorStop(1, "#5d6670");
+      paint.fillStyle = shade;
+      paint.beginPath();
+      hull.forEach(([x, y], index) => {
+        const at = [(x - left) * k + margin.left, (y - top) * k + margin.top];
+        if (index) paint.lineTo(...at);
+        else paint.moveTo(...at);
+      });
+      paint.closePath();
+      paint.fill();
+      return canvas.toDataURL("image/png");
+    },
+    { yaw, pitch }
+  );
+
+test("the 3D model's first frame is its photo: the same pose, size and place, so the swap shows no jump", async ({ page }) => {
+  const errors = watchErrors(page);
+  await openJourney(page);
+  await tab(page, "fort-lauderdale").click();
+  await expectSelected(page, "fort-lauderdale");
+  test.skip(!(await hasWebGL(page)), "this browser build has no WebGL, so there is no 3D view");
+  await giveTestModel(page, "fort-lauderdale", "westminster-cords");
+  // The cords' cutout becomes a photo of the test box, turned 35 degrees and seen from 30
+  // degrees up, and its yml pose says so.
+  const pose = { yaw: 35, pitch: 30 };
+  const poster = await boxPoster(page, pose);
+  await page.locator("#board-westminster-cords").evaluate(
+    (doc, { poster, pose }) => {
+      doc.dataset.modelYaw = String(pose.yaw);
+      doc.dataset.modelPitch = String(pose.pitch);
+      const image = doc.querySelector(".board-artifact-object img");
+      image.removeAttribute("srcset");
+      image.src = poster;
+      return image.decode();
+    },
+    { poster, pose }
+  );
+  const dialog = page.locator("dialog.journey-examine");
+  await page.locator("#board-westminster-cords > .board-doc-open").evaluate((element) => element.click());
+  await expect(dialog).toBeVisible();
+  await expectPhotoView(page);
+  // Zoomed in on the photo first: the press brings it back to rest before the model shows.
+  await dialog.getByRole("button", { name: "Zoom in", exact: true }).click();
+  const photoBefore = await dialog.locator(".examine-object img").boundingBox();
+  await modelToggle(page).click();
+  // At the swap (the first check once the model is ready, as the cross-fade starts), the
+  // model is in the yml pose and its silhouette lies on the photo's.
+  const swap = await (
+    await page.waitForFunction(
+      () => {
+        const stage = document.querySelector("dialog.journey-examine .examine-view");
+        if (!stage || stage.dataset.model !== "ready" || !window.__journeyModel.ready) return null;
+        return { pose: window.__journeyModel.pose(), match: window.__journeyModel.compare(2) };
+      },
+      null,
+      { timeout: 30000, polling: "raf" }
+    )
+  ).jsonValue();
+  expect(swap.pose).toMatchObject({ ...pose, zoom: 1 });
+  expect(swap.match.poster, "the photo's silhouette is there").toBeGreaterThan(2000);
+  expect(swap.match.iou, `the first frame on the photo: ${JSON.stringify(swap.match)}`).toBeGreaterThanOrEqual(0.85);
+  expect((await dialog.locator(".examine-object img").boundingBox()).width).toBeLessThan(photoBefore.width);
+  // It stays so (nothing turns in afterwards).
+  await page.waitForTimeout(1500);
+  expect(await modelPose(page)).toMatchObject({ ...pose, zoom: 1 });
+  expect((await page.evaluate(() => window.__journeyModel.compare(2))).iou).toBeGreaterThanOrEqual(0.85);
+  // The match is the pose's, not the fit's alone: another resting pose, refitted to the same
+  // photo, lies on it worse.
+  const wrong = await page.evaluate(() => {
+    window.__journeyModel.setPose(85, 70);
+    return window.__journeyModel.compare(2);
+  });
+  expect(wrong.iou).toBeLessThan(swap.match.iou - 0.03);
+  // Back to the photo: it lies where it lay before the press (the photo and the model share
+  // one place, and Show photo moves nothing).
+  const photoAtRest = await dialog.locator(".examine-object img").boundingBox();
+  await modelToggle(page).click();
+  await expectPhotoView(page);
+  const photoAfter = await dialog.locator(".examine-object img").boundingBox();
+  for (const key of ["x", "y", "width", "height"]) expect(Math.abs(photoAfter[key] - photoAtRest[key])).toBeLessThan(1.5);
+  await page.keyboard.press("Escape");
+  expect(errors).toEqual([]);
+});
+
+test("without WebGL an object with a model keeps its photo, says the 3D model is unavailable, and never loads three.js", async ({
+  page,
+}, testInfo) => {
+  const errors = watchErrors(page);
+  const warnings = [];
+  page.on("console", (message) => {
+    if (message.type() === "warning") warnings.push(message.text());
+  });
+  const loads = [];
+  page.on("request", (request) => {
+    if (MODEL_REQUEST.test(request.url())) loads.push(request.url());
+  });
+  await page.addInitScript(() => {
+    const original = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (type, ...rest) {
+      if (/webgl/i.test(type)) return null;
+      return original.call(this, type, ...rest);
+    };
+  });
+  await openJourney(page);
+  await tab(page, "fort-lauderdale").click();
+  await expectSelected(page, "fort-lauderdale");
+  await giveTestModel(page, "fort-lauderdale", "westminster-cords");
+  const dialog = page.locator("dialog.journey-examine");
+  await page.locator("#board-westminster-cords > .board-doc-open").evaluate((element) => element.click());
+  await expect(dialog).toBeVisible();
+  await expect(dialog.locator(".examine-object")).toHaveClass(/\bis-rigid\b/);
+  await expect(dialog.locator(".examine-object img")).toBeVisible();
+  await expect(dialog.locator(".examine-kicker")).not.toContainText("3D");
+  await expect(modelToggle(page)).toHaveText("3D model unavailable");
+  await expect(modelToggle(page)).toHaveAttribute("aria-disabled", "true");
+  await expect(modelToggle(page)).toHaveAttribute("aria-pressed", "false");
+  // Pressing it does nothing (it is aria-disabled, so the click is forced).
+  await modelToggle(page).click({ force: true });
+  await expect(dialog.locator(".examine-model canvas")).toHaveCount(0);
+  await expect(dialog.locator(".examine-view")).not.toHaveAttribute("data-model", /./);
+  await expect(modelNote(page)).toBeHidden();
+  if (!testInfo.project.name.includes("mobile")) {
+    await expect(dialog.locator(".examine-hint")).toHaveText("Scroll to zoom · drag to move · double-click to reset");
+  }
+  await page.waitForTimeout(500);
+  expect(loads).toEqual([]);
+  expect(warnings.some((warning) => /Journey 3D model unavailable/.test(warning))).toBe(true);
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  expect(errors).toEqual([]);
+});
+
+test("a model that fails to load, or loses its WebGL context, leaves the photo as it was", async ({ page }, testInfo) => {
+  const errors = watchErrors(page);
+  const warnings = [];
+  page.on("console", (message) => {
+    if (message.type() === "warning") warnings.push(message.text());
+  });
+  await openJourney(page);
+  await tab(page, "fort-lauderdale").click();
+  await expectSelected(page, "fort-lauderdale");
+  test.skip(!(await hasWebGL(page)), "this browser build has no WebGL, so no model is ever requested");
+  await giveTestModel(page, "fort-lauderdale", "westminster-cords", { status: 404 });
+  const dialog = page.locator("dialog.journey-examine");
+  const stage = dialog.locator(".examine-view");
+  const object = dialog.locator(".examine-object");
+  const unavailable = async () => {
+    await expect(stage).toHaveAttribute("data-model", "failed", { timeout: 30000 });
+    await expect(dialog.locator(".examine-model canvas")).toHaveCount(0);
+    await expect(object).toHaveClass(/\bis-rigid\b/);
+    await expect.poll(() => object.evaluate((element) => getComputedStyle(element).opacity)).toBe("1");
+    await expect(dialog.locator(".examine-kicker")).not.toContainText("3D");
+    await expect(object).not.toHaveAttribute("aria-label", /3D model/);
+    await expect(modelToggle(page)).toHaveText("3D model unavailable");
+    await expect(modelToggle(page)).toHaveAttribute("aria-disabled", "true");
+    await expect(modelToggle(page)).toHaveAttribute("aria-pressed", "false");
+    await expect(modelToggle(page)).not.toHaveAttribute("aria-busy", /./);
+    await expect(modelNote(page)).toBeHidden();
+    await expect(stage).not.toHaveAttribute("aria-describedby", /./);
+    if (!testInfo.project.name.includes("mobile")) {
+      await expect(dialog.locator(".examine-hint")).toHaveText("Scroll to zoom · drag to move · double-click to reset");
+    }
+  };
+  await page.locator("#board-westminster-cords > .board-doc-open").evaluate((element) => element.click());
+  await expectPhotoView(page);
+  await modelToggle(page).click();
+  await unavailable();
+  expect(warnings.some((warning) => /Journey 3D model unavailable/.test(warning))).toBe(true);
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+
+  // A model that loads, then loses its context: the photo comes back.
+  await page.unroute(`**${TEST_MODEL}`);
+  await giveTestModel(page, "fort-lauderdale", "westminster-cords");
+  await page.locator("#board-westminster-cords > .board-doc-open").evaluate((element) => element.click());
+  await expectPhotoView(page);
+  await modelToggle(page).click();
+  await expect(stage).toHaveAttribute("data-model", "ready", { timeout: 30000 });
+  await dialog.locator(".examine-model canvas").evaluate((canvas) => canvas.getContext("webgl2").getExtension("WEBGL_lose_context").loseContext());
+  await unavailable();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  expect(withoutRefusedLoads(errors)).toEqual([]);
+});
+
+// The three models, and what each one's note says while it shows: the two generated from
+// their photos keep the default note and kicker; the Pixel Watch, Google's own product model
+// adapted to Jiatuo's watch, names its source (yml model_note and model_kicker).
+const WATCH_NOTE = "3D model source: Google's Pixel Watch 3 product model.";
+const MODELS = [
+  { id: "frc-744-2019-robot", stop: "fort-lauderdale", note: NOTE, kicker: "Object, 3D model from a photo" },
+  { id: "idts-linktop", stop: "hangzhou", note: NOTE, kicker: "Object, 3D model from a photo" },
+  { id: "sensorclaw-pixel-watch", stop: "evanston", note: WATCH_NOTE, kicker: "Object, 3D model" },
+];
+
+test("each of the three 3D models shows its own note, and the watch's first frame is its photo", async ({ page }) => {
+  const errors = watchErrors(page);
+  await openJourney(page);
+  expect((await page.locator(".board-doc[data-model]").evaluateAll((docs) => docs.map((doc) => doc.id))).sort()).toEqual(
+    MODELS.map((model) => `board-${model.id}`).sort()
+  );
+  for (const model of MODELS) {
+    const doc = page.locator(`#board-${model.id}`);
+    if (model.note === NOTE) await expect(doc).not.toHaveAttribute("data-model-note", /./);
+    else await expect(doc).toHaveAttribute("data-model-note", model.note);
+  }
+  test.skip(!(await hasWebGL(page)), "this browser build has no WebGL, so there is no 3D view");
+  const dialog = page.locator("dialog.journey-examine");
+  for (const model of MODELS) {
+    await tab(page, model.stop).click();
+    await expectSelected(page, model.stop);
+    await page.locator(`#board-${model.id} > .board-doc-open`).evaluate((element) => element.click());
+    await expect(dialog).toBeVisible();
+    await expectPhotoView(page);
+    // The filmstrip shows the whole cutout, even one as tall and narrow as the watch.
+    const thumb = await dialog.locator(".examine-thumb[aria-current] img").evaluate((image) => {
+      const frame = image.parentElement.getBoundingClientRect();
+      const box = image.getBoundingClientRect();
+      return { frame: frame.height, image: box.height };
+    });
+    expect(thumb.image, `${model.id}: its thumbnail fits its frame`).toBeLessThanOrEqual(thumb.frame + 1);
+    await modelToggle(page).click();
+    await expect(dialog.locator(".examine-view")).toHaveAttribute("data-model", "ready", { timeout: 40000 });
+    await expect(modelNote(page)).toBeVisible();
+    await expect(modelNote(page)).toHaveText(model.note);
+    await expect(dialog.locator(".examine-kicker")).toHaveText(new RegExp(`· ${model.kicker}$`));
+    if (model.id === "sensorclaw-pixel-watch") {
+      await expect(dialog.locator(".examine-view")).not.toHaveAttribute("aria-label", /made from a photo/);
+      const match = await page.evaluate(() => window.__journeyModel.compare(2));
+      expect(match.iou, `the watch's first frame on its photo: ${JSON.stringify(match)}`).toBeGreaterThanOrEqual(0.8);
+    }
+    await modelToggle(page).click();
+    await expectPhotoView(page);
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+  }
+  expect(errors).toEqual([]);
+});
+
+test("every object's 3D model is a credited glTF binary on the site, with its real size", async ({ page, request }) => {
+  await openJourney(page);
+  const models = await page
+    .locator(".board-doc[data-model]")
+    .evaluateAll((docs) =>
+      docs.map((doc) => ({ ...doc.dataset, image: doc.querySelector(".board-artifact-object img")?.getAttribute("src") || "" }))
+    );
+  const credits = fs.readFileSync(path.join(__dirname, "../../assets/img/journey/CREDITS.md"), "utf8");
+  for (const model of models) {
+    expect(model.kind, model.doc).toBe("artifact");
+    expect(model.medium, `${model.doc} keeps its cutout on the board`).toBe("cutout");
+    expect(model.image, `${model.doc} has a cutout poster`).toMatch(/\/assets\/img\/journey\/artifacts\/[\w-]+\.png$/);
+    expect(model.model, model.doc).toMatch(/\/assets\/models\/journey\/[\w-]+\.glb$/);
+    expect(Number(model.modelSize), `${model.doc}: model_size_m, in metres`).toBeGreaterThan(0.005);
+    expect(Number(model.modelSize), `${model.doc}: model_size_m, in metres`).toBeLessThan(3);
+    if (model.modelYaw !== undefined) expect(Number.isFinite(Number(model.modelYaw)), `${model.doc}: model_yaw`).toBe(true);
+    if (model.modelPitch !== undefined) {
+      expect(Number(model.modelPitch), `${model.doc}: model_pitch`).toBeGreaterThanOrEqual(Number(model.modelPitchMin ?? 0));
+      expect(Number(model.modelPitch), `${model.doc}: model_pitch`).toBeLessThanOrEqual(75);
+    }
+    if (model.modelPitchMin !== undefined) {
+      expect(Number(model.modelPitchMin), `${model.doc}: model_pitch_min`).toBeGreaterThanOrEqual(-35);
+      expect(Number(model.modelPitchMin), `${model.doc}: model_pitch_min`).toBeLessThanOrEqual(70);
+    }
+    // The lens, a vertical field of view in degrees (journey-model.js clamps it to 10..50).
+    if (model.modelFov !== undefined) {
+      expect(Number(model.modelFov), `${model.doc}: model_fov`).toBeGreaterThanOrEqual(10);
+      expect(Number(model.modelFov), `${model.doc}: model_fov`).toBeLessThanOrEqual(50);
+    }
+    const file = model.model.split("/").pop();
+    expect(credits, `${file} has a row in CREDITS.md`).toContain(file);
+    const response = await request.get(model.model);
+    expect(response.ok(), model.model).toBe(true);
+    const body = await response.body();
+    expect(body.readUInt32LE(0), `${model.model} is a glTF binary`).toBe(0x46546c67);
+    expect(body.length, `${model.model} stays light enough for a phone`).toBeLessThan(12 * 1024 * 1024);
+  }
 });
 
 test("dragging a paper never drags off its picture file", async ({ page }) => {

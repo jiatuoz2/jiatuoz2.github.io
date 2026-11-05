@@ -38,7 +38,7 @@ endcomment %} {% assign stops = site.data.journey.stops %}
             <div class="board-surface" style="--board-map: url('{{ map_path | relative_url }}')">
               <header class="board-case" data-case="{{ case_no }}">
                 <div class="board-plate">
-                  <p class="journey-board-case" aria-hidden="true">Case file № {{ case_no }}</p>
+                  <p class="journey-board-case" aria-hidden="true">Case file No. {{ case_no }}</p>
                   <h3 class="journey-board-title" id="journey-{{ stop.id }}-title">{{ stop.name }}</h3>
                   <p class="journey-board-period">{{ stop.period }} {%- if stop.current %} <span class="journey-board-now">Now</span>{% endif %}</p>
                   <span class="board-plate-tape" aria-hidden="true"></span>

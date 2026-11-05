@@ -36,6 +36,41 @@
 #   attach      id of another doc on this board; the doc is drawn on that one, over its
 #               bottom edge or a lower corner, and moves with it (it is not a separate
 #               item and takes no stack). No tape, pin or string holds an artifact.
+#   model       artifacts only, optional: a 3D model of the object made from a photo of it,
+#               or a manufacturer's own model of it adapted to the photo (the Pixel Watch)
+#               (glTF binary, assets/models/journey/<doc id>.glb: +Y up, front +Z, centred).
+#               The board keeps the cutout; the examine window opens on the cutout too,
+#               with a "See 3D model" button that loads the model (three.js, only then),
+#               cross-fades to it and lets it be turned freely ("Show photo" goes back).
+#               Leave it out when the model does not look real (a melted blob, a toy): the
+#               cutout alone is better.
+#   scale       artifacts only, optional (0.3-1, default 1): how large the object is drawn on
+#               its paper and in the examine window, against the usual size. A hand-held
+#               device (the Linktop monitor) is 0.6; a robot keeps 1.
+#   model_size_m  with a model: the object's real longest side in metres (its scale, so
+#               its shadows and lighting read true)
+#   model_yaw   its resting turn in degrees (default -20, the front turned a little toward
+#               the lamp at the upper left; positive turns the front to the viewer's right)
+#   model_pitch how far above the table it is seen at rest, in degrees (default 16; 0 to
+#               75). Set both so the model at rest is seen as the cutout's photo shows it:
+#               the window cross-fades from the cutout to the model in that pose, fitted to
+#               the cutout's outline, so its first frame is the photo. Find them with
+#               bin/fit_journey_model_pose.js (it prints the pose whose silhouette best
+#               matches the cutout's).
+#   model_pitch_min  optional: how low a visitor may tip the view, in degrees (default 0,
+#               level with the table; -35 to 70). Raise it to keep a generated underside
+#               out of sight.
+#   model_fov   optional: the viewer's lens, its vertical field of view in degrees
+#               (default 20, a long lens as product photos are taken; 10 to 50). A photo
+#               taken close up shows more perspective (the 2019 robot's frame narrows
+#               toward the top): give it a wider lens, fitted with the pose
+#               (bin/fit_journey_model_pose.js --fov), so the first frame still matches.
+#   model_note  optional, for a model not made from the photo: the note under the model in
+#               the examine window (default "This 3D model was reconstructed from a photo
+#               and may not be accurate."); say where it came from and that it may differ
+#               from the real object (the Pixel Watch's is Google's own product model)
+#   model_kicker  optional, with model_note: the kicker while the model shows (default
+#               "Object, 3D model from a photo"), e.g. "Object, 3D model"
 #   scan_kind   the doc is a real document: diploma (a scan of the diploma itself) |
 #               paper-page (a paper's first page, printed) | cover (a closed diploma cover
 #               with a plain typed label, for a diploma with no scan yet)
@@ -66,9 +101,11 @@
 #   The picture shows that kind of object, not Jiatuo's own unit, unless Jiatuo supplied
 #   it (the two FRC Team 744 robots are cut out of his own photos). Name a model only when the CV or Jiatuo names it (the Linktop health monitor);
 #   otherwise name the category. Never use a drawing, a plain photo or a different model;
-#   leave the artifact out instead. A recoloured picture (the salutatorian cords) says so
-#   in its credit. Pictures live in assets/img/journey/artifacts/
-#   (credits in assets/img/journey/CREDITS.md).
+#   leave the artifact out instead. A recoloured picture says so
+#   in its credit. Pictures live in assets/img/journey/artifacts/, models in
+#   assets/models/journey/ (credits in assets/img/journey/CREDITS.md: a model's row names
+#   its source photo, that photo's licence, and the generator; an adapted manufacturer's
+#   model, its source and what was changed).
 # stacks: piles of related docs under one pin (id, title). Stack ids are unique across all
 #   boards (they become page ids). Keep each board to at most nine top-level items
 #   (unstacked docs plus stacks; attached docs don't count) so the fixed-size board never
@@ -172,11 +209,11 @@ stops:
         medium: cutout
         attach: westminster
         title: Salutatorian cords
-        meta: Honor cords in yellow and blue
+        meta: Two honor cords, white and red
         image: /assets/img/journey/artifacts/salutatorian-cords.png
-        image_alt: A loosely coiled honor cord twisted from blue and yellow strands, ending in four yellow tassels.
-        credit: Ejs1989, CC BY-SA 4.0, recoloured
-        credit_link: https://commons.wikimedia.org/wiki/File:Honor_Cord_if_Kappa_Pi_International_Honorary_Art_Fraternity.jpg
+        image_alt: Two coiled honor cords with tassels, a red one lying across a white one.
+        credit: Senior Class Products, product photos
+        credit_link: https://seniorclassproducts.com/products/honor-cord-red
       - id: frc-744
         kind: project
         title: FRC Team 744
@@ -190,6 +227,11 @@ stops:
         title: "2019 robot · Destination: Deep Space"
         meta: Holding a cargo ball
         image: /assets/img/journey/artifacts/frc-744-2019-robot.png
+        model: /assets/models/journey/frc-744-2019-robot.glb
+        model_size_m: 1.0
+        model_yaw: -49.7
+        model_pitch: 17.5
+        model_fov: 45
         image_alt: Team 744's 2019 robot, a square base in blue bumpers numbered 744 under an aluminium A-frame with clear side panels and a black carbon-fibre lift, holding an orange ball between green rollers.
         credit: Jiatuo Zou
       - id: frc-744-team
@@ -373,7 +415,13 @@ stops:
         title: Linktop health monitor
         meta: Readings streamed over Bluetooth (Linktop SDK)
         image: /assets/img/journey/artifacts/linktop-health-monitor.png
-        image_alt: A small white rounded-square health monitor printed with “LINKTOP”, with a silver-ringed sensor pad in the middle of its face and a sensor window on its front edge.
+        scale: 0.6
+        model: /assets/models/journey/idts-linktop.glb
+        model_size_m: 0.07
+        model_yaw: -7.5
+        model_pitch: 43.8
+        model_fov: 35
+        image_alt: A small, flat white health monitor with rounded corners, seen from above its front, printed with “LINKTOP” toward the back of its top; a silver-grey ring around a black sensor pad sits in the middle, and a small grey window with a blue light is set in its front edge.
         credit: Linktop (product image, supplied by Jiatuo)
       - id: idts-team
         kind: note
@@ -687,6 +735,22 @@ stops:
         title: SensorClaw
         meta: In progress
         body: Turns a one-sentence request (“Buzz me when I knock the table”) into a personal smartwatch gesture tracker, using a multi-agent LLM pipeline that trains a personal IMU detector.
+      - id: sensorclaw-pixel-watch
+        kind: artifact
+        medium: cutout
+        attach: sensorclaw
+        title: Pixel Watch
+        meta: The smartwatch SensorClaw's gesture trackers run on
+        image: /assets/img/journey/artifacts/sensorclaw-pixel-watch.png
+        image_alt: A Pixel Watch on a pale blue-grey band, its screen showing the inrtl Lab app running.
+        credit: Jiatuo Zou
+        model: /assets/models/journey/sensorclaw-pixel-watch.glb
+        model_size_m: 0.224
+        model_yaw: 0
+        model_pitch: 75
+        model_fov: 50
+        model_note: "3D model source: Google's Pixel Watch 3 product model."
+        model_kicker: Object, 3D model
       - id: spatial-memory
         kind: project
         stack: evanston-projects

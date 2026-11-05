@@ -1,0 +1,204 @@
+{
+  "defaults": {
+    "seed": 1,
+    "sparse_structure_sampler": { "steps": 25, "cfg_strength": 7.5 },
+    "slat_sampler": { "steps": 25, "cfg_strength": 3.0 },
+    "multi_image_mode": "stochastic",
+    "max_triangles": 40000,
+    "texture_size": 1024,
+    "jpeg_quality": 88,
+    "max_bytes": 2500000,
+    "rotate_deg": [0, 0, 0]
+  },
+  "artifacts": {
+    "westminster-cords": {
+      "sources": ["assets/img/journey/artifacts/salutatorian-cords.png"],
+      "size_m": 0.9,
+      "texture_size": 2048,
+      "status": "reject",
+      "note": "TRELLIS gave two flat rings and turned the red cord magenta and the white one grey; the flat cutout stays."
+    },
+    "frc-744-2019-robot": {
+      "sources": ["assets/img/journey/artifacts/frc-744-2019-robot.png"],
+      "size_m": 1.0,
+      "max_triangles": 120000,
+      "texture_size": 2048,
+      "max_bytes": 5000000,
+      "status": "keep",
+      "hue_fix": [[30, 62, -20]],
+      "seed": 7,
+      "remove_boxes": [
+        [-0.45, -0.385, -0.25, -0.05, 0.2, 0.25],
+        [-0.05, -0.385, -0.18, 0.0, -0.12, 0.12],
+        [-0.295, -0.44, -0.3, 0.0, -0.36, 0.3]
+      ],
+      "patches": [
+        {
+          "sphere": [0.12, -0.258, -0.032, 0.143],
+          "rgb": [155, 72, 4],
+          "clear": [
+            [-1, 0, 0],
+            [-0.77, 0, -0.64]
+          ]
+        },
+        { "plate": [-0.285, -0.415, -0.31, 0.02, -0.405, 0.31], "rgb": [34, 32, 30] }
+      ],
+      "project": [
+        { "yaw": 50, "pitch": 17, "fov": 35 },
+        { "yaw": 230, "pitch": 17, "fov": 35, "below_y": -0.37 }
+      ],
+      "bumper_text": {
+        "text": "744",
+        "rgb": [240, 242, 246],
+        "font": "C:/Windows/Fonts/bahnschrift.ttf",
+        "variation": "Bold",
+        "tracking": 0.1,
+        "stroke": 0.014,
+        "band_y": [-0.5, -0.335],
+        "depth": 0.065,
+        "fabric_rgb": [36, 56, 190],
+        "mark_sat": 0.75,
+        "faces": [
+          { "normal": [0, 0, 1], "at": 0.415, "box": [0.125, -0.474, 0.295, -0.383] },
+          { "normal": [1, 0, 0], "at": 0.395, "box": [0.135, -0.49, 0.3, -0.406] },
+          { "normal": [0, 0, -1], "at": 0.415, "box": [0.13, -0.487, 0.295, -0.412] },
+          { "normal": [-1, 0, 0], "at": 0.395, "box": [0.135, -0.487, 0.3, -0.41] }
+        ]
+      },
+      "repaint": [
+        { "box": [-0.33, -0.32, -0.37, -0.08, -0.08, -0.28], "hue": [70, 170], "min_sat": 0.35 },
+        { "box": [-0.33, -0.2, -0.37, 0.06, 0.0, -0.16], "hue": [70, 170], "min_sat": 0.35 },
+        {
+          "box": [-0.05, -0.44, -0.25, 0.3, -0.33, 0.2],
+          "max_sat": 0.25,
+          "min_value": 110,
+          "rgb": [40, 38, 36],
+          "unseen": { "yaw": 50, "pitch": 17, "fov": 35 }
+        }
+      ],
+      "mirror_copy": {
+        "box": [0.0, -0.44, -0.3, 0.295, -0.36, 0.3],
+        "x": 0.0,
+        "skip_sphere": [0.12, -0.258, -0.032, 0.15],
+        "skip_hue": [[70, 170]]
+      },
+      "pad_gutters": true,
+      "note": "Seeds 1-14 tried: every one mirrors the photographed intake, so the far side got a second ball and a second roller arm. Seed 7 (the ball's size and place closest to the photo) is kept with that copy cut away, with the shard-strewn floor it stood on (remove_boxes), the near ball's hidden half rounded off and the far bay floored with a dark plate inside the frame rails (patches; the plate no longer reaches out under the bumpers, where it showed as a black line along their tops). The photo is painted back onto the faces it shows (project, camera from --fit-pose: yaw 50, pitch 17, fov 35), so the bumpers read 744 as in the photo; a second camera turned 180 degrees paints the photo's bumpers onto the back and left ones (below_y), which TRELLIS lettered in gibberish. Then bumper_text paints every white mark on the four bumper faces out with the fabric's blue and draws a clean white 744 (Bahnschrift Bold) on each: on the two faces the photo shows, where its 744s land on the model (the left one raised about 1 cm toward the photo's; higher, it would wrap onto the model's lower bumper top and shear); on the far two, as Jiatuo's photo of the other side shows them. All four read 744, as on the real robot. repaint takes two strips of the photo's green roller off the far sponsor panel and darkens the pale shards round the ball's foot that the photo does not see. The atlas gutters are padded (pad_gutters), so no seam line shows on the sponsor panels. Last, the near bay floor, wiring as the photo paints it, is copied mirrored into the far bay (mirror_copy), which Jiatuo's photo of that side shows crowded with wiring and electronics; the ball and rollers are not copied, so there is one ball and one holder. The photo was taken close up, so the viewer matches it with a wider lens: model_fov 45, model_yaw -49.7, model_pitch 17.5 (bin/fit_journey_model_pose.js)."
+    },
+    "frc-744-2020-robot": {
+      "sources": ["assets/img/journey/artifacts/frc-744-2020-robot.png"],
+      "size_m": 1.0,
+      "max_triangles": 120000,
+      "texture_size": 2048,
+      "max_bytes": 5000000,
+      "status": "reject",
+      "seed": 3,
+      "note": "From the one frontal photo TRELLIS invents the depth: a long, low robot with noodle-like arches on top instead of two tall uprights, the frame melting into grey plastic close up and the bumper '744' reading '00'. Seeds 1-4 tried. Another try needs a three-quarter photo of the robot; the flat cutout stays."
+    },
+    "idts-linktop": {
+      "sources": ["assets/img/journey/artifacts/linktop-health-monitor.png"],
+      "size_m": 0.07,
+      "texture_size": 2048,
+      "status": "keep",
+      "seed": 15,
+      "true_extents_m": [0.07, 0.0184, 0.07],
+      "flatten_top": 0.14,
+      "project": { "yaw": 7.5, "pitch": 43.8, "fov": 35, "min_up": 0.6 },
+      "square_off": { "exponent": 3.0 },
+      "repaint": [{ "box": [-0.32, -0.1, -0.6, 0.12, 0.07, -0.4] }],
+      "note": "Manufacturer's product image (a three-quarter view from above the front, supplied by Jiatuo), not openly licensed. Seeds 1-20 tried; 15 is the one that came out a flat slab with the sensor window on top and the port window on the front edge. TRELLIS made it 1.35 times as deep as wide, so it is scaled to the real 70 x 18.4 x 70 mm (true_extents_m), its top levelled (flatten_top), and its lopsided footprint made the symmetric rounded square the device is (square_off, a superellipse; n 3 fits the photo's outline best, IoU 0.92 against 0.917 at 2.4). The photo is painted back on the top and its rounded shoulder only (project, camera fitted to the cutout's silhouette, min_up): painted on the steep side walls too, its bottom edge left a dark curved crease across the front. The walls keep TRELLIS's colour, front port window and blue light included, and the copy of that window TRELLIS put on the back is painted out (repaint). A multi-image build from Jiatuo's extra photos (C:/Users/charl/Pictures/journey-3d/README.txt) has not been tried yet."
+    },
+    "cascade-eye-tracker": {
+      "sources": ["assets/img/journey/artifacts/eye-tracker.png"],
+      "size_m": 0.32,
+      "texture_size": 2048,
+      "status": "reject",
+      "note": "The only photo is a 640x50 sliver of a thin bar; TRELLIS gave flat slabs with holes; the flat cutout stays."
+    },
+    "eit-imu-board": {
+      "sources": ["assets/img/journey/artifacts/imu-board.png"],
+      "size_m": 0.03,
+      "texture_size": 2048,
+      "status": "reject",
+      "seed": 1,
+      "note": "Seeds 1-12 tried. Every one gives the board extra mounting holes (five or six, ragged, where the real one has four), the silkscreen garbled (\"LSM9DS1 Breakout\" unreadable, the flame logo moved) and the parts in other places, so the model turned to the photo did not match its cutout (IoU 0.80 at best) and did not look like the board from any side. The flat cutout stays."
+    },
+    "sensorclaw-pixel-watch": {
+      "sources": ["assets/img/journey/artifacts/sensorclaw-pixel-watch.png"],
+      "size_m": 0.215,
+      "max_bytes": 5000000,
+      "status": "keep",
+      "import": {
+        "url": "https://interactivedemo.withgoogle.com/pixel-watch-3-3d/models/D004.glb",
+        "page": "https://interactivedemo.withgoogle.com/pixel-watch-3-3d/",
+        "sha256": "0c30fabb628f1e391ddd8a66b92934964a9e8f4b658e3aca5367e27b74db65c3",
+        "copyright": "Pixel Watch 3 model (c) Google LLC, from Google's Explore Pixel Watch 3 in 3D; recoloured, resized, band laid flat and screen replaced for jiatuoz2.github.io",
+        "variant": "Porcelain",
+        "drop_nodes": ["Occluder"],
+        "case_node": "EnclosureButton_v04.001",
+        "case_across_m": 0.041,
+        "keep_thickness": true,
+        "keep_size": ["Crown"],
+        "band": {
+          "node": "Band_v04",
+          "post_node": "Post.001",
+          "post_strap": "12",
+          "swap": true,
+          "root_mm": 4,
+          "bend_mm": 5,
+          "touch_mm": 45,
+          "straps": {
+            "12": {
+              "remap": [[12, 66, 0.804]]
+            },
+            "6": {
+              "remap": [
+                [10, 38.5, 0.53],
+                [87.5, 105, 0.92],
+                [111, 117, 0.92]
+              ]
+            }
+          },
+          "clear_occlusion": {
+            "keep_mm": 6,
+            "keep_uv": [[0.676, 0.908, 0.012]]
+          }
+        },
+        "materials": {
+          "EnclosureButton_Porcelain": {
+            "name": "case_champagne_gold",
+            "rgb": [224, 204, 170],
+            "metallic": 1.0,
+            "roughness": 0.22
+          },
+          "crown_porcelain": {
+            "name": "crown_champagne_gold",
+            "rgb": [224, 204, 170],
+            "metallic": 1.0,
+            "roughness": 0.3
+          },
+          "Band_Porcelain": {
+            "name": "band_pale_blue_grey",
+            "rgb": [199, 208, 216],
+            "metallic": 0.0,
+            "roughness": 0.55
+          }
+        },
+        "screen": {
+          "node": "Screen.001",
+          "from": "assets/img/journey/artifacts/sensorclaw-pixel-watch.png",
+          "centre_px": [136.9, 640.4],
+          "radius_px": 106.6,
+          "size": 512,
+          "material_name": "screen_inrtl_lab",
+          "active": 0.8,
+          "erase": [[0.845, 0.51, 0.065]]
+        },
+        "rotate_deg": [-90, 0, 0],
+        "texture_max": 2048,
+        "jpeg_quality": 90
+      },
+      "note": "Not generated: at Jiatuo's request, Google's own Pixel Watch 3 model (the 45 mm one in Google's Explore Pixel Watch 3 in 3D, linked from the Google Store; (c) Google, no licence stated, so not openly licensed; credited in CREDITS.md), adapted to Jiatuo's watch as the cutout shows it. Taken to be the 41 mm Champagne Gold (a gold crown and champagne-gold case; that colour came in 41 mm only), so the case is scaled to 41 mm across, its thickness and the crown's size kept; the band, scaled with it, is about 20 mm wide. Case and crown champagne gold, band pale blue-grey (sampled from the photos), the Porcelain variant's other materials as Google made them. Google modelled the band closed as if worn: each strap is unbent from the loop and laid flat and open, the holed strap at 12 o'clock and the pin strap at 6 as on Jiatuo's watch, drooping to the table; its plain stretches are shortened so the holes, slots and pin land where the cutout's do (Jiatuo's band is shorter than Google's; the holes, slots and pin keep their size), and the occlusion baked where the loop hid the straps is cleared, the G on the holed strap kept. The screen is Jiatuo's, cut from the published cutout (its device ID painted out before), glare and specks taken out, lit under the glass. The photo was taken close up and from above, so the cutout's far strap looks narrower: the viewer's widest lens fits it best (model_fov). Tried first with TRELLIS from Jiatuo's four photos (seed 2) and rejected: the screen came out a glowing teal dome, the bezel brassy and the band a stiff plank, navy underneath."
+    }
+  }
+}

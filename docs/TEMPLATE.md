@@ -192,6 +192,9 @@ Files:
 - assets/js/journey-map.js: the MapLibre globe, pins, route, daylight, and clock.
 - assets/js/journey-board.js: the boards, clusters, threads, piles, and artifacts.
 - assets/js/journey-examine.js: the close-examine window (window.JourneyExamine).
+- assets/js/journey-model.js: the examine window's 3D viewer for artifacts with a model
+  (an ES module that journey-examine.js imports with import() only when "See 3D model" is
+  pressed in such an object's window; it imports three.js from assets/vendor/three/).
 - assets/js/journey-sound.js: sound effects (always on; no switch).
 - \_sass/\_journey-map.scss (globe), \_journey-board.scss (boards, papers, title sheet,
   portraits), \_journey-examine.scss (examine window), and \_journey-layout.scss
@@ -199,6 +202,15 @@ Files:
   \_includes/scripts.html loads journey-sound, journey-map, journey-board,
   journey-examine, then journey.js, all deferred.
 - assets/vendor/maplibre-gl/: MapLibre GL JS 5.24.0 (maplibre-gl.js, .css, LICENSE.txt).
+- assets/vendor/three/: three.js 0.187.0 (MIT, LICENSE kept): build/three.module.min.js
+  and three.core.min.js, and the addons GLTFLoader, RoomEnvironment, BufferGeometryUtils,
+  SkeletonUtils and the meshopt decoder, as static browser files (never run in Node).
+  bin/vendor_three.sh fetches them (jsDelivr's minified builds of the npm release, plus
+  LICENSE from the npm tarball) and points their imports at each other, so no import map
+  is needed; VERSION.txt records the release. Prettier ignores assets/vendor/.
+- assets/models/journey/: the artifacts' 3D models (<doc id>.glb), made from photos of
+  the objects, or adapted from the maker's own model (the Pixel Watch; see "3D models of the
+  artifacts" below).
 - assets/data/journey-map/: bundled NASA imagery (blue-marble/{0..2}/{x}/{y}.jpg and
   night-lights.jpg), so the globe paints even when the tile hosts are unreachable, plus
   ocean-mask.png (the sun glint) and starfield.png (the space backdrop). Both were
@@ -216,6 +228,7 @@ Files:
   assets/img/journey/textures/ (NumPy + Pillow, fixed seeds, no outside artwork).
 - bin/build_journey_pixelated.py: rebuilds the pixelated stand-ins (<name>.pixel.jpg) of
   the portraits in assets/img/journey/people/ and of the team photo.
+- bin/vendor_three.sh: re-vendors three.js into assets/vendor/three/ (sh, curl, sed).
 
 ### Content schema (\_data/journey.yml)
 
@@ -250,6 +263,23 @@ Files:
   that document, over its bottom edge or a lower corner, under only its own contact and
   drop shadows (no tape, pin, tag, or string); it moves with the document and does not
   count as a board item. medium photo and the legacy bag are deprecated.
+- An artifact's 3D model (optional; the board always keeps the cutout): model, the site
+  path of a glTF binary (assets/models/journey/<doc id>.glb); model_size_m, the object's
+  real longest side in metres (required with a model: it sets the scale, so the contact
+  shadow and lighting read true); model_yaw, its resting turn in degrees (default -20, the
+  front turned a little toward the lamp at the upper left; positive turns the front to
+  the viewer's right); model_pitch, how high above the table it is seen at rest, in
+  degrees (default 16, within 0 to 75); model_pitch_min, how low a visitor may tip the
+  view (default 0, level with the table; -35 to 70); model_fov, the viewer's lens, its
+  vertical field of view in degrees (default 20; 10 to 50), wider for a photo taken close
+  up (the 2019 robot's, 45). Set model_yaw and model_pitch (and model_fov if needed) to the
+  photo's view (bin/fit_journey_model_pose.js finds it): the model's first frame is then
+  the cutout's picture. A model not made from the photo says what it is: model_note, the note
+  under it (default "This 3D model was reconstructed from a photo and may not be accurate."),
+  and model_kicker, the kicker while it shows (default "Object, 3D model from a photo"); the
+  Pixel Watch's are "3D model source: Google's Pixel Watch 3 product model." and "Object, 3D model". journey-doc.html renders them, on
+  artifacts only, as data-model, data-model-size, data-model-yaw, data-model-pitch,
+  data-model-pitch-min, data-model-fov, data-model-note and data-model-kicker.
 - Real documents: scan_kind diploma (a scan of the diploma on cream stock), paper-page
   (a paper's first page as a stapled printout), or cover (a closed, padded diploma cover
   with a plain typed label, for a diploma with no scan yet; Westminster Academy). scan
@@ -466,10 +496,70 @@ themes, with a grain and the board's street map faint behind: the text on the le
 tilted toward the light. Drag turns a paper (up to about 25° each way; documents, scans,
 cards, prints, notes, folders and the Westminster cover), the light, folds, shadow and edge
 following the turn; an object (kind artifact: a robot, the cords, every cutout and
-photographed object) has no model to turn, so it lies flat under one soft, still shadow
-and a drag only moves it when zoomed in (hint: "Scroll to zoom · drag to move when zoomed
-· double-click to reset"). The wheel, a pinch, or the buttons zoom it (1x to 2.5x), and a
-double-click or Reset puts it back. Nothing in the section starts the browser's own image
+photographed object) without a 3D model lies flat under one soft, still shadow and a drag
+only moves it when zoomed in (hint: "Scroll to zoom · drag to move · double-click to
+reset"). The wheel, a pinch, or the buttons zoom it (1x to 2.5x), and a double-click or
+Reset puts it back. An object with a 3D model (model in journey.yml) opens exactly like
+one without: its photo cutout, rigid zoom and pan, the same hint, kicker "Object", and
+nothing of three.js or the model is requested (not with the page, not with the window).
+At Jiatuo's request it shows the picture first and offers the model on a button: "See 3D
+model" (a small cube; aria-pressed false), on a pill of its own just left of the zoom
+buttons (in the narrow layout at the left of their row, the zoom's level then hidden for
+room). Pressing it (click, Enter or Space) brings the photo back to rest if it was zoomed,
+then loads three.js and the model (the button reads "Loading 3D model…", aria-disabled and
+aria-busy, keeping its focus; the photo stays meanwhile), and the model's transparent WebGL
+canvas fades in over the photo (.examine-model). The model's first frame is the photo's
+picture, so nothing jumps or turns at the swap: it is
+drawn in the photo's pose (model_yaw, model_pitch), through a long lens (20° vertical
+field of view, near-orthographic like a product photo; model_fov gives a photo taken close
+up, with more perspective, its own), with the camera's distance and
+lens shift fitted so that its silhouette in that pose (projected from its vertices) fills
+the box of the cutout's opaque pixels, in the same place. The fade starts only once that
+frame is on screen and the photo has come to rest (the window's opening, a step along the
+filmstrip, the reset); the model fades in over the still-solid photo, which goes only after.
+It never turns in or spins by itself. While it shows, the kicker reads "Object, 3D model
+from a photo", the hint "Drag to turn it · scroll to zoom · double-click to reset", the
+button "Show photo" (a framed picture; aria-pressed true), and a small note lies over the
+view's foot, just above the buttons, on phones too: "This 3D model was reconstructed from a
+photo and may not be accurate." (light italic on its own dark pill, readable in both site
+themes as the window is dark in both; it is also the view's accessible description,
+aria-describedby). A model not made from its photo has its own note and kicker (yml
+model_note and model_kicker): the Pixel Watch's names its source, Google's Pixel Watch 3
+product model, and its kicker reads "Object, 3D model"; the
+view and the object are then named "a 3D model" rather than "a 3D model made from a photo"
+for screen readers. An object with a model keeps that foot clear in both views: it is fitted
+into the room above the note and centred there, a little higher than other objects, so the
+note never covers it and the photo and the model lie in the same place. A drag turns the
+model freely (all the way round; up and
+down from model_pitch_min, default 0°, level with the table, to 75°), and it coasts on
+gently when let go (at most about a third of a turn); the wheel, a pinch, the buttons and
++/- zoom its camera (so it stays sharp); a double-click, Reset or 0 put it back to rest by
+the shortest way round; with the view focused (it is a Tab stop while it holds a model)
+the arrow keys turn it instead of browsing. "Show photo" turns the model back to rest (if
+it was turned or zoomed), shows the photo again beneath it, fades the model out and
+disposes it (its WebGL context released); pressed again meanwhile, the model stays. In the
+narrow layout the object keeps clear of the zoom buttons. The lighting is physically based
+(sRGB, no tone mapping; RoomEnvironment reflections through PMREM; one warm key light from
+the upper left like the papers' lamp), set about as bright as the photo's own light: the
+texture is the photo, so at rest the model shows its colours unchanged (Neutral tone
+mapping squeezed the highlights and faded the white Linktop's silver ring and print; ACES
+Filmic turned the blue bumpers violet). The object stands on a faint, warm pool of
+lamplight on the table, a little lighter than the window's backdrop, with the lamp's soft
+shadow (opacity 0.45) and a contact shadow baked from the model's own underside, so it
+never floats. It draws only when something changes, at a device pixel ratio of at most 2.
+One model is open at a time, and only until the photo is asked for again: walking the
+filmstrip or closing the window disposes it too, and every document opens on its photo
+again (the map keeps its own WebGL context; a context the browser already took is not
+released twice). Phones get the 3D view too: iPhone WebKit has WebGL 2 (the Playwright
+mobile project renders the models). Without WebGL 2 the button reads "3D model
+unavailable" at once (aria-disabled); when the model fails, or has not appeared within 15
+seconds, or its context is lost, the photo stays (or comes back), flat and still as above,
+and the button reads the same, with a console warning only. Under reduced motion every
+swap is instant.
+warning only. window.\_\_journeyModel (journey-examine.js) exposes the open model to the
+tests and to bin/fit_journey_model_pose.js: pose(), setPose(yaw, pitch) (a new resting
+pose, refitted and drawn at once), compare(step) (the intersection over union of the
+model's and the cutout's silhouettes) and masks(step). Nothing in the section starts the browser's own image
 drag: every img is draggable="false", -webkit-user-drag is off, the board is not
 text-selectable, and journey.js and the window cancel dragstart (the window's text column
 stays selectable). A filmstrip
@@ -487,6 +577,89 @@ the filmstrip never shows a portrait. A photo with an image_pixel (the team phot
 the same way: pixelated here until "Reveal photo", then the eye-barred original; its board
 print and filmstrip thumbnail keep the blurred stand-in. Everything is instant under
 reduced motion.
+
+### 3D models of the artifacts
+
+At Jiatuo's request each artifact may have a 3D model, shown only in the examine window,
+and there only when the visitor presses "See 3D model" (the board and the window open on
+the light cutout; a note under the model says it was reconstructed from a photo and may
+not be accurate). A model is made from the same photo as the cutout
+(the highest-resolution source available) with an open image-to-3D model run locally on
+Jiatuo's GPU, in its own environment outside the repo (C:/Users/charl/tools/journey-3d);
+the sides the photo does not show are inferred. The Pixel Watch's is the one exception,
+adapted from Google's own model (see the end of this section). The bar is the photos' own: realistic,
+never a melted blob or a toy. A model that does not pass is not used, and the artifact
+keeps its flat cutout (no model field) rather than ship a poor one.
+
+A model file is a glTF binary, assets/models/journey/<doc id>.glb: +Y up, the object's
+front facing +Z, centred, with its longest side 1 unit (the viewer rescales it to
+model_size_m anyway). Textures in the file as JPEG, PNG or WebP; geometry plain or
+meshopt-compressed (gltfpack -cc), not Draco and not KTX2/Basis (those decoders are not
+vendored, so such a file fails and the cutout stays; the build decodes a Draco source). Keep each file well under 12 MB
+(the spec's limit; a few MB is better on a phone).
+
+To add a model to an artifact:
+
+1.  Generate assets/models/journey/<doc id>.glb from the artifact's photo with the local
+    generator, and look at its previews from the front, side, back and top. If it does not
+    read as the real object, stop here.
+2.  Add to the doc in \_data/journey.yml: model: /assets/models/journey/<doc id>.glb and
+    model_size_m: <real longest side in metres>, then model_yaw and model_pitch, the
+    photo's view, found by the pose fitter with the site served (the Docker preview):
+
+        node bin/fit_journey_model_pose.js <doc id> [--headed] [--dump sil.png]
+
+    It opens the examine window in Chromium (Playwright), presses "See 3D model", searches
+    yaw and pitch (a coarse
+    grid, then a finer search) through window.\_\_journeyModel in the real viewer, and
+    prints the pose whose silhouette best matches the cutout's (IoU), last as a JSON line.
+    --model <file.glb> scores a generator candidate before it is adopted, --poster
+    <file.png> a new cutout; --headed draws on the GPU (headless draws in software and is
+    slow); --smoke only checks that it runs. A symmetric object's sides look alike in
+    outline, so near-ties are settled by how well the shading agrees; still look at the
+    window. A photo taken close up (a frame narrowing toward the top) fits better with a
+    wider lens: rerun with --fov 30, 40, 45 and put the best in the yml as model_fov with
+    its pose (the 2019 robot went from IoU 0.80 at the default 20 to 0.89 at 45). If the
+    best IoU stays low (about under 0.85), the model's shape is not the photo's:
+    regenerate or drop it.
+
+3.  Add a row for the .glb to the "3D models" table in assets/img/journey/CREDITS.md: the
+    source photo, that photo's licence (a model from a CC BY-SA photo is CC BY-SA too), and
+    the generator and its licence.
+4.  Check the object in the examine window (it opens on its photo; "See 3D model" turns
+    the photo into the model without a jump, it turns, rests on its shadow, "Show photo"
+    and a failure or WebGL off keep or bring back the photo) and run the journey tests.
+
+The Pixel Watch on the SensorClaw project (doc sensorclaw-pixel-watch, attached to sensorclaw on
+the Evanston board) is the one model not generated. Its cutout is Jiatuo's own photo (the
+screen's device ID painted out); the generator, given Jiatuo's four photos of the watch,
+made a glowing dome of the screen and a plank of the band, so at Jiatuo's request the model
+is Google's own Pixel Watch 3 model instead (the 45 mm one from Google's "Explore Pixel Watch
+3 in 3D", https://interactivedemo.withgoogle.com/pixel-watch-3-3d/, linked from the Google
+Store; © Google, no licence stated, so not openly licensed, credited in CREDITS.md and kept
+with Google's marks as they are), adapted to Jiatuo's watch as the photos show it: a 41 mm
+Champagne Gold Pixel Watch 3 (the gold crown and champagne-gold case; that colour came in
+41 mm only) on a pale blue-grey band, lying on its back with the band open and flat.
+bin/build_journey_models.py builds it from the "import" block of its entry in
+bin/journey_models.json:
+
+    $J/env/python.exe bin/build_journey_models.py sensorclaw-pixel-watch [--source D004.glb]
+
+It fetches the file once into $J/downloads/<id>/ (or takes a copy given with --source),
+checks its sha256, decodes it (Draco, with DracoPy) and writes a plain glTF binary with
+no extensions: the Porcelain variant's materials baked in and the rest of the variants, the
+invisible AR shadow mesh and Google's watch faces dropped; the case scaled to 41 mm across
+(its thickness kept, as both sizes are the same thickness, and the crown its own size); the
+case and crown champagne gold and the band pale blue-grey (sampled from the photos); the
+band, which Google modelled closed as if worn, unbent strap by strap from the loop into
+straight straps lying open (holed strap at 12 o'clock, pin strap at 6, as on Jiatuo's
+watch), their plain stretches shortened to the photo's (the holes, slots and pin keep their
+size), the occlusion Google baked into the band where the loop hid it cleared; and the
+screen's picture Jiatuo's, cut from the published cutout (never the raw photos), glare
+taken out, lit under the glass (an emissive texture). Its note and kicker say it is based
+on Google's product model (model_note, model_kicker). Its first frame is fitted like any
+other (model_yaw, model_pitch, model_fov); the photo was taken close up and from above, so
+its lens is wide. It is attached, so it does not count toward the board's nine items.
 
 ### Sound, fallbacks, and night mode
 
@@ -515,17 +688,21 @@ Newsreader is distributed under the SIL Open Font License; its license is includ
 at assets/fonts/Newsreader-OFL.txt.
 
 My Journey assets carry their own terms. MapLibre GL JS is BSD-3-Clause
-(assets/vendor/maplibre-gl/LICENSE.txt). The bundled NASA Blue Marble and Black Marble
+(assets/vendor/maplibre-gl/LICENSE.txt); three.js is MIT (assets/vendor/three/LICENSE).
+A 3D model made from someone else's photo is a derivative of it and keeps the photo's
+licence (CC BY-SA stays CC BY-SA); CREDITS.md names the photo, its licence and the
+generator. The bundled NASA Blue Marble and Black Marble
 imagery is public domain. The boards' street maps are OpenStreetMap data (ODbL),
 credited on each board and in assets/img/journey/maps/CREDITS.md.
 
 Image rule: a picture from someone else must be public domain, CC0, CC BY, or CC BY-SA,
 with the licence checked on the file's own source page (normally Wikimedia Commons), a
 credit and credit_link in journey.yml, and a row in assets/img/journey/CREDITS.md.
-Adapted CC BY-SA images stay CC BY-SA and say how they were changed (the salutatorian
-cords are "recoloured"). The only exceptions are pictures Jiatuo asked for or supplied,
-each marked in its own section of CREDITS.md as not openly licensed: the FRC Team 744
-robot photo (from the team's site), the Linktop product image (supplied by Jiatuo), and
+Adapted CC BY-SA images stay CC BY-SA and say how they were changed. The only exceptions
+are pictures Jiatuo asked for or supplied, each marked in its own section of CREDITS.md
+as not openly licensed: the FRC Team 744 robot photo (from the team's site), the Linktop
+product image (supplied by Jiatuo), the salutatorian cords (two retailer product photos,
+at Jiatuo's request), and
 the people's portraits (from their own official profile pages). The scans in
 assets/img/journey/docs/ are Jiatuo's own diplomas and papers. Board textures
 are generated for this site (bin/build_journey_textures.py and the slate) and sound effects
@@ -598,8 +775,17 @@ Escape, Back and a click outside, focus return, opening from a paper, an artifac
 a spread pile, the filmstrip by keys, buttons, and thumbnails, zoom and reset); portraits
 strongly blurred on the board (blur of at least 6px) and mildly pixelated, unblurred, in
 the window, with "Reveal photo" / "Hide photo" swapping to the original and back; the team
-photo the same way (eye bars in the revealed original); objects never turning under a
-drag (zoom and pan only) while papers do; no native image drag on the board or in the
+photo the same way (eye bars in the revealed original); objects without a model never
+turning under a drag (zoom and pan only) while papers do; an object given a model (a small
+box built in the spec and served by page.route, so no fixture file) loading three.js, the
+viewer and the model only when it opens and never with the page, its canvas replacing the
+cutout and drawing something, turning under a drag within the pitch limits, zooming by
+button and wheel, turning by the arrow keys without browsing, resetting on a double-click,
+being disposed when the filmstrip moves on and reloaded on return, leaving no canvas after
+the window closes while the map's WebGL context lives on, turning in once and coasting
+when flung, then coming to rest; without WebGL, or when the model fails to load, the flat
+cutout staying with the plain hint and no three.js request; every model on the boards a
+credited glTF binary under assets/models/journey/ with a real size; no native image drag on the board or in the
 window; the four redacted diploma files (pinned by their SHA-256 hashes; no other diploma
 path on the page); the masthead's Journey link gliding to the section like the other
 links; both FRC 744 robot cutouts, the canal photo on hangzhou-early, a UIUC diploma
