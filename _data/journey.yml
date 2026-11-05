@@ -1,8 +1,14 @@
 # "My Journey" map and detective boards on the homepage (_includes/journey.html).
-# Facts come from assets/pdf/cv.pdf, _bibliography/papers.bib, _pages/about.md, and what
-# Jiatuo has stated directly (Hangzhou before 2017; Westminster Academy, Fort Lauderdale,
-# 2017-2021, salutatorian of the class of 2021, FRC Team 744 in the 2019 and 2020
-# seasons; the 2020 competition was cancelled because of COVID-19). Keep them in step with those sources rather than adding new claims here.
+# Facts come from assets/pdf/cv.pdf, _bibliography/papers.bib, _pages/about.md, the papers'
+# PDFs in assets/pdf/ (the study hardware: a Meta Quest 3 with two controllers in VR Task
+# Guidance, Bimanual and Delegate the Details; OLIVE's Varjo XR-3, eye tracking at 200 Hz,
+# and B-Alert X24 EEG, 20 electrodes at 256 Hz), and what Jiatuo has stated directly
+# (Hangzhou before 2017; Westminster Academy, Fort Lauderdale, 2017-2021, salutatorian of
+# the class of 2021, FRC Team 744 in the 2019 and 2020 seasons; the 2020 competition was
+# cancelled because of COVID-19; OLIVE's Varjo XR-3 was used with Valve Index controllers,
+# not pictured, and its EEG was recorded through the disposable B-Alert sensor strip; the
+# EIT + IMU project did not use the IMU breakout board once shown, so it has no artifact).
+# Keep them in step with those sources rather than adding new claims here.
 #
 # stops: chronological. The map draws a route through them in this order and dims older
 #   legs. lat/lon are decimal degrees. year is the short label on the timeline. start/end
@@ -46,7 +52,10 @@
 #               cutout alone is better.
 #   scale       artifacts only, optional (0.3-1, default 1): how large the object is drawn on
 #               its paper and in the examine window, against the usual size. A hand-held
-#               device (the Linktop monitor) is 0.6; a robot keeps 1.
+#               device (the Linktop monitor) is 0.6; a robot keeps 1. Objects that can lie
+#               side by side keep their real proportions: the New York headsets (about 20
+#               cm across) are 0.7 (Varjo XR-3) and 0.8 (the Quest 3 with its controllers),
+#               and OLIVE's EEG strip (about 30 cm long) is 1.
 #   model_size_m  with a model: the object's real longest side in metres (its scale, so
 #               its shadows and lighting read true)
 #   model_yaw   its resting turn in degrees (default -20, the front turned a little toward
@@ -99,9 +108,11 @@
 #   1 is the registrar's cover sheet), never a page with a registrar's details.
 # artifact: a physical object tied to the work (a device it ran on, a sensor it read).
 #   The picture shows that kind of object, not Jiatuo's own unit, unless Jiatuo supplied
-#   it (the two FRC Team 744 robots are cut out of his own photos). Name a model only when the CV or Jiatuo names it (the Linktop health monitor);
-#   otherwise name the category. Never use a drawing, a plain photo or a different model;
-#   leave the artifact out instead. A recoloured picture says so
+#   it (the two FRC Team 744 robots are cut out of Jiatuo's own photos). Name a model only
+#   when the CV, a paper or Jiatuo names it (the Linktop health monitor; the Meta Quest 3,
+#   Varjo XR-3 and B-Alert X24 of the New York papers); otherwise name the category.
+#   Several artifacts may lie on one paper (OLIVE's headset and EEG strip). Never use a
+#   drawing, a plain photo or a different model; leave the artifact out instead. A recoloured picture says so
 #   in its credit. Pictures live in assets/img/journey/artifacts/, models in
 #   assets/models/journey/ (credits in assets/img/journey/CREDITS.md: a model's row names
 #   its source photo, that photo's licence, and the generator; an adapted manufacturer's
@@ -541,6 +552,28 @@ stops:
         scan_alt: The first page of the OLIVE paper, “Augmenting Human Performance with an XR Agent Learning from Online Behavior and BCI Evidence”, with its author list, a figure of the XR task and EEG setup, and the abstract.
         scan_width: 1200
         scan_height: 1553
+      - id: olive-varjo-xr3
+        kind: artifact
+        medium: cutout
+        attach: olive
+        title: Varjo XR-3
+        meta: OLIVE's mixed-reality headset (eye tracking at 200 Hz)
+        image: /assets/img/journey/artifacts/olive-varjo-xr3.png
+        scale: 0.7
+        image_alt: A black Varjo XR-3 mixed-reality headset seen at an angle from the front, with its padded headband looped over the top and the camera module on its glossy visor.
+        credit: (c) Varjo, press image
+        credit_link: https://web.archive.org/web/20220125100701/https://varjo.com/media/
+      - id: olive-balert-strip
+        kind: artifact
+        medium: cutout
+        attach: olive
+        title: B-Alert X24 sensor strip
+        meta: The disposable EEG strip that recorded OLIVE's EEG (20 electrodes, 256 Hz)
+        image: /assets/img/journey/artifacts/olive-balert-strip.png
+        scale: 1
+        image_alt: A B-Alert X24 disposable EEG sensor strip lying flat, a clear plastic flex circuit with green traces, with a central spine, four pairs of branches ending in black foam tabs and a long band along the bottom, carrying twenty round electrode pads labelled with 10-20 sites (Fp1, Fp2, F7, F3, Fz, F4, F8, T3, C3, Cz, C4, T4, T5, P3, Pz, P4, T6, O1, POz, O2); the ribbon at the top is marked 30-4252 MED SINGLE USE.
+        credit: BIOPAC Systems, product photo
+        credit_link: https://www.biopac.com/product/b-alert-strips/
       - id: xichen-he
         kind: person
         stack: ny-cgui-people
@@ -596,6 +629,17 @@ stops:
         scan_alt: "The first page of “Delegate the Details: Flexible Assembly Constraint Authoring for Collaborative XR”, with its author list, a figure of parts on a pallet, and the abstract."
         scan_width: 1200
         scan_height: 1553
+      - id: nyc-quest-3
+        kind: artifact
+        medium: cutout
+        attach: delegate
+        title: Meta Quest 3
+        meta: The headset and controllers VR Task Guidance, Bimanual and Delegate the Details ran on
+        image: /assets/img/journey/artifacts/nyc-quest-3.png
+        scale: 0.8
+        image_alt: A white Meta Quest 3 headset seen from its front right, with three pill-shaped camera windows on its visor and its white fabric strap looped behind it, between its two white Touch Plus controllers, their black thumbstick faces on top.
+        credit: Meta, product image
+        credit_link: https://www.meta.com/quest/quest-3/buy-now/
       - id: ben-yang
         kind: person
         stack: ny-cgui-people
@@ -763,16 +807,6 @@ stops:
         meta: Research project · Northwestern University
         dates: "2026"
         body: Synchronized wrist EIT and IMU data with motion-capture ground truth for wearable hand-pose estimation.
-      - id: eit-imu-board
-        kind: artifact
-        medium: cutout
-        attach: eit-imu
-        title: IMU sensor board
-        meta: An IMU, the motion sensor behind the wrist data
-        image: /assets/img/journey/artifacts/imu-board.png
-        image_alt: A small square red circuit board with one tiny motion-sensor chip, a row of labelled pins and four mounting holes.
-        credit: SparkFun, CC BY 2.0
-        credit_link: https://commons.wikimedia.org/wiki/File:SparkFun_9DoF-IMU-Breakout_LSM9DS1_13284-02.jpg
       - id: evanston-university-hall
         kind: photo
         title: University Hall

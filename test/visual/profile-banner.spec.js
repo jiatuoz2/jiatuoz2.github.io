@@ -23,7 +23,7 @@ test("cloth renders at high resolution with native contact information", async (
   await expect(banner.locator(".banner-cord")).toHaveCount(2);
   await expect(banner.locator(".author__name")).toContainText("Zou");
   await expect(banner.locator(".banner-email-address")).toHaveText("jz3331@columbia.edu");
-  await expect(banner.locator(".banner-links a")).toHaveCount(5);
+  await expect(banner.locator(".banner-links a")).toHaveCount(6);
   const density = await banner.locator("canvas").evaluate((canvas) => canvas.width / canvas.getBoundingClientRect().width);
   expect(density).toBeGreaterThanOrEqual(1.99);
   expectPrintedCloth(await banner.locator("canvas").screenshot({ animations: "disabled" }));
@@ -159,7 +159,7 @@ test("lost graphics context preserves contacts and cloth interaction", async ({ 
   await expect(banner).toHaveAttribute("data-cloth-renderer", "canvas");
   await expect(banner).toHaveAttribute("data-banner-state", "hover");
   await expect.poll(async () => Number(await banner.getAttribute("data-cloth-depth"))).toBeGreaterThan(18);
-  await expect(banner.locator(".banner-links a")).toHaveCount(5);
+  await expect(banner.locator(".banner-links a")).toHaveCount(6);
   expectPrintedCloth(await banner.locator("canvas").screenshot({ animations: "disabled" }));
 });
 
@@ -183,7 +183,7 @@ test("scroll rolls into one cylinder and unrolls with usable contacts", async ({
   await expect(banner).toHaveAttribute("data-banner-scroll", "expanded");
   expect(Math.abs((await banner.boundingBox()).height - expanded.height)).toBeLessThan(2);
   expect(await page.locator("#profile-scroll").evaluate((element) => element.inert)).toBe(false);
-  await expect(banner.locator(".banner-links a")).toHaveCount(5);
+  await expect(banner.locator(".banner-links a")).toHaveCount(6);
   await banner.locator('a[href^="mailto:"]').focus();
   await expect(banner.locator('a[href^="mailto:"]')).toBeFocused();
 });

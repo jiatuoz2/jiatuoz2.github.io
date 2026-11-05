@@ -3,8 +3,8 @@
 
    window.JourneyMap.mount(figure, stops, { onSelect, onFail, loadNear, time }) returns
    { select(id, { animate, overview }), reset({ animate }), isAnimating(), map, destroy(),
-     now(), setTime(time), getTime(), getSun(), getMode(), load(), setShown(shown), resize(),
-     setWindowed(windowed) }
+     now(), setTime(time), getTime(), getSun(), getMode(), getRoute(), load(), setShown(shown),
+     resize(), setWindowed(windowed) }
    and also sets figure.journeyMap. onSelect(id) fires only when a pin is chosen on the map;
    select() is the controller's way in (timeline tabs, #journey-<id> links) and never calls back.
    onFail() fires once if the map cannot start after mount() returned it (the figure is hidden
@@ -20,6 +20,18 @@
    longitude an hour), while the camera stays wherever the visitor left it; nothing turns on
    its own. Test hook: ?journey-time=<ISO time> (or data-journey-time on the figure, or the
    time option, or setTime()) holds the clock at that moment; now() returns to the real time.
+
+   Route: each leg flies as an airline-style arc, drawn by a second custom WebGL layer. It
+   follows the great circle, leaves the ground at one stop, climbs to a peak that grows with
+   the leg's length, and lands at the next, leaning to one side (see ARC_RISE and ARC_LEAN),
+   so from above it bows like a flight path on a flat map. Zoomed
+   in, the arcs are lowered to stay under the camera (ARC_ROOM). Older legs are dimmer, and
+   dashes flow slowly along the newest (none under reduced motion). Where an arc goes behind
+   the globe it fades at the limb; where it rises above the limb it stays in sight, and the
+   whole-globe view leaves room above the globe for it. If that layer cannot run, the legs
+   are drawn as lines on the ground instead. getRoute() reports how the route is drawn and
+   where each leg's midpoint lands on screen, in the air and on the ground below it (for
+   tests).
 
    Pane: the figure fills the Map pane of the section's split view ([data-journey-pane="map"],
    run by journey.js), beside the board and always on screen with it, at one fixed size. The
@@ -151,11 +163,81 @@
       hillShadow: "#000000",
       hillHighlight: "#5d6b7a",
       hillAccent: "#0d1218",
-      route: "#ffc46b",
+      // Coral, not amber: the streets already glow amber.
+      route: "#ff765e",
       routeCase: "#000000",
-      routeGlow: "#ff9a3c",
-      flow: "#fff3d6",
+      routeGlow: "#ff4630",
+      flow: "#fff1ec",
     },
+  };
+
+  /* The route's look. Over the imagery (below the street map's zoom) it glows gold whatever
+     the palette, the newest leg brightest. Widths are CSS px against zoom, [zoom, width, ...];
+     opacities against a leg's age (0 is the newest), [age, opacity, ...]. The flight arcs
+     and the fallback lines on the ground share them. */
+  const ROUTE_IMAGERY = { glow: "#ff9d3a", casing: "#1a0b00", core: "#fff1d2", coreOld: "#ffc66e", flow: "#ffffff" };
+  const ROUTE_WIDTH = {
+    glow: [1, 9, 6, 13, 12, 18],
+    glowBlur: [1, 7, 6, 10, 12, 13],
+    casing: [1, 4.2, 6, 6, 12, 8],
+    core: [1, 2.4, 12, 4.2],
+    coreOld: [1, 1.8, 12, 3.2],
+    flow: [1, 1.2, 12, 2],
+  };
+  const ROUTE_CASING_BLUR = 1.2;
+  // On the street map (from IMAGERY_STEP) older legs fade less: dimmer still, they would pass
+  // for roads.
+  const ROUTE_OPACITY = {
+    glow: [0, 0.6, 1, 0.38, 4, 0.16],
+    casing: [0, 0.32, 4, 0.12],
+    core: [0, 1, 1, 0.8, 4, 0.42],
+    coreStreet: [0, 1, 1, 0.9, 4, 0.72],
+    casingStreet: [0, 0.32, 4, 0.22],
+    flow: 0.85,
+  };
+  // The flowing dashes: 3 line widths long, 4 apart, moving 4.5 widths a second toward the
+  // newest stop, redrawn every FLOW_STEP_MS. The arcs' shader and the fallback lines' dash
+  // arrays are both built from DASH.
+  const DASH = { gap: 4, dash: 3, speed: 4.5 };
+  const FLOW_STEP_MS = 80;
+
+  // Flight arcs: a leg θ radians long (θ = 1 is 6,371 km) peaks ARC_RISE·θ^ARC_POWER Earth
+  // radii above the ground, so a 12,000 km leg over the Pacific climbs to about 1,020 km and
+  // a 1,150 km hop to about 250 km; the height along the leg is peak·sin(πt). Each arc also
+  // leans to one side, ARC_LEAN of its height sideways (about 37° off upright; which side:
+  // flightArc): seen from straight above it bows like a flight path drawn on a flat map, and
+  // a leg that leaves the middle of the view is not seen edge-on (upright, it would fold
+  // into a spike over the globe's limb).
+  const ARC_RISE = 0.11;
+  const ARC_POWER = 0.6;
+  const ARC_LEAN = 0.75;
+  // Zoomed in, the camera comes down toward the arcs: each is lowered, its shape kept, until
+  // its peak is at most ARC_ROOM of the camera's height, and leans less, until it reaches at
+  // most ARC_SWAY of that height sideways. So it never passes over the camera or strays off
+  // the screen from the ground it flies over, and close in it runs along its track like a
+  // line on the map. On the whole globe the arcs fly at full height and lean (lift 1).
+  const ARC_ROOM = 0.15;
+  const ARC_SWAY = 0.05;
+  const EARTH_RADIUS = 6371008.8; // metres, as in MapLibre's globe
+
+  // A [zoom or age, value, ...] ramp, read linearly and held at its ends.
+  const ramp = (stops, x) => {
+    if (x <= stops[0]) return stops[1];
+    for (let i = 2; i < stops.length; i += 2) {
+      if (x <= stops[i]) return stops[i - 1] + ((x - stops[i - 2]) / (stops[i] - stops[i - 2])) * (stops[i + 1] - stops[i - 1]);
+    }
+    return stops[stops.length - 1];
+  };
+  const hexColor = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+  // The arcs' colors as 0-1 RGB: over the imagery, and on the light and dark street maps.
+  const ROUTE_RGB = {
+    imagery: Object.fromEntries(Object.entries(ROUTE_IMAGERY).map(([key, hex]) => [key, hexColor(hex)])),
+    ...Object.fromEntries(
+      Object.entries(PALETTES).map(([name, p]) => [
+        name,
+        { glow: hexColor(p.routeGlow), casing: hexColor(p.routeCase), core: hexColor(p.route), coreOld: hexColor(p.route), flow: hexColor(p.flow) },
+      ])
+    ),
   };
 
   /* ---------- geometry ---------- */
@@ -165,13 +247,13 @@
   const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
   const angleBetween = (a, b) => Math.acos(Math.max(-1, Math.min(1, dot(toVec(a), toVec(b)))));
 
-  // Points along the great circle from a to b, about one per degree, with longitudes
-  // unwrapped so a leg over the antimeridian stays one continuous line.
-  const greatCircle = (a, b) => {
+  // Points along the great circle from a to b, about one per degree (or segments + 1 of
+  // them), with longitudes unwrapped so a leg over the antimeridian stays one continuous line.
+  const greatCircle = (a, b, segments) => {
     const va = toVec(a);
     const vb = toVec(b);
     const omega = Math.acos(Math.max(-1, Math.min(1, dot(va, vb))));
-    const steps = Math.max(2, Math.ceil(omega / RAD));
+    const steps = segments || Math.max(2, Math.ceil(omega / RAD));
     const points = [];
     let previous = null;
     for (let i = 0; i <= steps; i += 1) {
@@ -258,9 +340,13 @@
 
   /* ---------- style ---------- */
   const fade = (to = 1) => ["interpolate", ["linear"], ["zoom"], BASE_FADE[0], 0, BASE_FADE[1], to];
+  const byZoom = (stops) => ["interpolate", ["linear"], ["zoom"], ...stops];
+  const byAge = (stops) => ["interpolate", ["linear"], ["get", "age"], ...stops];
+  // The zoom where labels, borders and the route switch from their over-imagery colors.
+  const IMAGERY_STEP = (BASE_FADE[0] + BASE_FADE[1]) / 2;
   // Over imagery, labels and borders are light on a dark halo; on the drawn map they follow the palette.
   // A step, not a blend: half-way colors are illegible on the half-faded map.
-  const overImagery = (imageryValue, mapValue) => ["step", ["zoom"], imageryValue, (BASE_FADE[0] + BASE_FADE[1]) / 2, mapValue];
+  const overImagery = (imageryValue, mapValue) => ["step", ["zoom"], imageryValue, IMAGERY_STEP, mapValue];
   // Only names written in Latin script, for an English page (name_en falls back to the local name).
   const LATIN = ["any", ["has", "name:en"], ["has", "name:latin"]];
   const NAME = ["coalesce", ["get", "name:en"], ["get", "name:latin"], ["get", "name"]];
@@ -317,10 +403,10 @@
     // Over the imagery borders and labels are faint, so day and night lead; the route glows gold.
     "border-state": { paint: { "line-color": overImagery("rgba(255,255,255,0.16)", p.state) } },
     "border-country": { paint: { "line-color": overImagery("rgba(255,255,255,0.3)", p.border) } },
-    "route-glow": { paint: { "line-color": overImagery("#ff9d3a", p.routeGlow) } },
-    "route-case": { paint: { "line-color": overImagery("#1a0b00", p.routeCase) } },
-    route: { paint: { "line-color": overImagery(["case", ["==", ["get", "age"], 0], "#fff1d2", "#ffc66e"], p.route) } },
-    "route-flow": { paint: { "line-color": overImagery("#ffffff", p.flow) } },
+    "route-glow": { paint: { "line-color": overImagery(ROUTE_IMAGERY.glow, p.routeGlow) } },
+    "route-case": { paint: { "line-color": overImagery(ROUTE_IMAGERY.casing, p.routeCase) } },
+    route: { paint: { "line-color": overImagery(["case", ["==", ["get", "age"], 0], ROUTE_IMAGERY.core, ROUTE_IMAGERY.coreOld], p.route) } },
+    "route-flow": { paint: { "line-color": overImagery(ROUTE_IMAGERY.flow, p.flow) } },
     "label-water": {
       paint: { "text-color": overImagery("rgba(175,210,245,0.5)", p.waterLabel), "text-halo-color": overImagery("rgba(0,10,30,0.35)", p.labelHalo) },
     },
@@ -450,46 +536,45 @@
       layout: { "line-join": "round" },
       paint: { "line-width": ["interpolate", ["linear"], ["zoom"], 1, 0.6, 6, 1.2, 12, 2] },
     },
-    // The route: a soft glow and a dark casing for contrast on imagery, the legs dimming with
-    // age, and a slow flow of dashes along the newest leg (off under reduced motion).
+    // The route on the ground: only the fallback for the flight arcs (createRouteLayer), so
+    // hidden unless that layer cannot run. A soft glow and a dark casing for contrast on
+    // imagery, the legs dimming with age, and a slow flow of dashes along the newest leg.
     {
       id: "route-glow",
       type: "line",
       source: "route",
-      layout: { "line-cap": "round", "line-join": "round" },
+      layout: { "line-cap": "round", "line-join": "round", visibility: "none" },
       paint: {
-        "line-width": ["interpolate", ["linear"], ["zoom"], 1, 9, 6, 13, 12, 18],
-        "line-blur": ["interpolate", ["linear"], ["zoom"], 1, 7, 6, 10, 12, 13],
-        "line-opacity": ["interpolate", ["linear"], ["get", "age"], 0, 0.6, 1, 0.38, 4, 0.16],
+        "line-width": byZoom(ROUTE_WIDTH.glow),
+        "line-blur": byZoom(ROUTE_WIDTH.glowBlur),
+        "line-opacity": byAge(ROUTE_OPACITY.glow),
       },
     },
     {
       id: "route-case",
       type: "line",
       source: "route",
-      layout: { "line-cap": "round", "line-join": "round" },
+      layout: { "line-cap": "round", "line-join": "round", visibility: "none" },
       paint: {
-        "line-width": ["interpolate", ["linear"], ["zoom"], 1, 4.2, 6, 6, 12, 8],
-        "line-opacity": ["interpolate", ["linear"], ["get", "age"], 0, 0.32, 4, 0.12],
-        "line-blur": 1.2,
+        "line-width": byZoom(ROUTE_WIDTH.casing),
+        "line-opacity": overImagery(byAge(ROUTE_OPACITY.casing), byAge(ROUTE_OPACITY.casingStreet)),
+        "line-blur": ROUTE_CASING_BLUR,
       },
     },
     {
       id: "route",
       type: "line",
       source: "route",
-      layout: { "line-cap": "round", "line-join": "round" },
+      layout: { "line-cap": "round", "line-join": "round", visibility: "none" },
       paint: {
+        // The newest leg is a little wider (both ramps share their zoom stops).
         "line-width": [
           "interpolate",
           ["linear"],
           ["zoom"],
-          1,
-          ["case", ["==", ["get", "age"], 0], 2.4, 1.8],
-          12,
-          ["case", ["==", ["get", "age"], 0], 4.2, 3.2],
+          ...ROUTE_WIDTH.core.flatMap((value, i) => (i % 2 ? [["case", ["==", ["get", "age"], 0], value, ROUTE_WIDTH.coreOld[i]]] : [value])),
         ],
-        "line-opacity": ["interpolate", ["linear"], ["get", "age"], 0, 1, 1, 0.8, 4, 0.42],
+        "line-opacity": overImagery(byAge(ROUTE_OPACITY.core), byAge(ROUTE_OPACITY.coreStreet)),
       },
     },
     {
@@ -497,11 +582,11 @@
       type: "line",
       source: "route",
       filter: ["==", ["get", "age"], 0],
-      layout: { "line-cap": "butt", "line-join": "round" },
+      layout: { "line-cap": "butt", "line-join": "round", visibility: "none" },
       paint: {
-        "line-width": ["interpolate", ["linear"], ["zoom"], 1, 1.2, 12, 2],
-        "line-opacity": 0.85,
-        "line-dasharray": [0, 4, 3],
+        "line-width": byZoom(ROUTE_WIDTH.flow),
+        "line-opacity": ROUTE_OPACITY.flow,
+        "line-dasharray": [0, DASH.gap, DASH.dash],
       },
     },
     // Labels.
@@ -686,6 +771,69 @@
     };
   };
 
+  /* ---------- custom WebGL layers: shared helpers ----------
+     Both custom layers (daylight, the flight arcs) are written in GLSL ES 3.00 and placed by
+     MapLibre's projection prelude, which differs between the globe and the flat map (each is
+     compiled once per projection variant). */
+  const PROJECTION_UNIFORMS = [
+    "u_projection_matrix",
+    "u_projection_fallback_matrix",
+    "u_projection_tile_mercator_coords",
+    "u_projection_clipping_plane",
+    "u_projection_transition",
+  ];
+
+  // MapLibre runs WebGL 2 where it can; the same shaders are rewritten for WebGL 1.
+  const translateShader = (source, isVertex, webgl2) => {
+    if (webgl2) return `#version 300 es\n${source}`;
+    let out = source.replace(/\btexture\(/g, "texture2D(");
+    if (isVertex) out = out.replace(/^in /gm, "attribute ").replace(/^out /gm, "varying ");
+    else
+      out = out
+        .replace(/^in /gm, "varying ")
+        .replace(/^out vec4 fragColor;$/m, "")
+        .replace(/fragColor/g, "gl_FragColor");
+    return out;
+  };
+
+  // A linked program, its uniforms' locations (u) and each attribute's location by name.
+  const compileProgram = (gl, vertex, fragment, attributes, uniforms) => {
+    const webgl2 = typeof WebGL2RenderingContext !== "undefined" && gl instanceof WebGL2RenderingContext;
+    const shader = (type, source) => {
+      const object = gl.createShader(type);
+      gl.shaderSource(object, translateShader(source, type === gl.VERTEX_SHADER, webgl2));
+      gl.compileShader(object);
+      if (!gl.getShaderParameter(object, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(object) || "Shader failed");
+      return object;
+    };
+    const program = gl.createProgram();
+    gl.attachShader(program, shader(gl.VERTEX_SHADER, vertex));
+    gl.attachShader(program, shader(gl.FRAGMENT_SHADER, fragment));
+    gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program) || "Program failed");
+    return {
+      program,
+      u: Object.fromEntries(uniforms.map((name) => [name, gl.getUniformLocation(program, name)])),
+      ...Object.fromEntries(attributes.map((name) => [name, gl.getAttribLocation(program, name)])),
+    };
+  };
+
+  // The prelude's uniforms for this frame. The matrices go through two Float32Arrays kept by
+  // the layer, so a frame allocates nothing. Uniforms a variant does not use are skipped.
+  const setProjection = (gl, u, data, projection, fallback) => {
+    projection.set(data.mainMatrix);
+    gl.uniformMatrix4fv(u.u_projection_matrix, false, projection);
+    if (u.u_projection_fallback_matrix) {
+      fallback.set(data.fallbackMatrix);
+      gl.uniformMatrix4fv(u.u_projection_fallback_matrix, false, fallback);
+    }
+    const tile = data.tileMercatorCoords;
+    if (u.u_projection_tile_mercator_coords) gl.uniform4f(u.u_projection_tile_mercator_coords, tile[0], tile[1], tile[2], tile[3]);
+    const plane = data.clippingPlane;
+    if (u.u_projection_clipping_plane) gl.uniform4f(u.u_projection_clipping_plane, plane[0], plane[1], plane[2], plane[3]);
+    if (u.u_projection_transition) gl.uniform1f(u.u_projection_transition, data.projectionTransition);
+  };
+
   /* ---------- daylight: night laid over the map by a custom WebGL layer ----------
      One mesh in Mercator coordinates covers the world (plus a cap at each pole on the globe).
      MapLibre's projection prelude places it on the globe or the flat map, so the shading is
@@ -793,67 +941,41 @@ void main() {
     let pendingLights = null;
     let pendingDetail = null;
     let pendingOcean = null;
+    // The images as they arrived, kept to upload again into a restored context.
+    let lightsImage = null;
+    let oceanImage = null;
+    let lastDetail = null;
     let lightsOn = 0;
     let detailBox = null;
     let anisotropy = null;
     const programs = new Map();
+    const projection = new Float32Array(16);
+    const fallback = new Float32Array(16);
 
-    // MapLibre runs WebGL 2 where it can; the same shaders are rewritten for WebGL 1.
-    const translate = (source, isVertex, webgl2) => {
-      if (webgl2) return `#version 300 es\n${source}`;
-      let out = source.replace(/\btexture\(/g, "texture2D(");
-      if (isVertex) out = out.replace(/^in /gm, "attribute ").replace(/^out /gm, "varying ");
-      else
-        out = out
-          .replace(/^in /gm, "varying ")
-          .replace(/^out vec4 fragColor;$/m, "")
-          .replace(/fragColor/g, "gl_FragColor");
-      return out;
-    };
-
-    const compile = (shaderData) => {
-      const webgl2 = typeof WebGL2RenderingContext !== "undefined" && gl instanceof WebGL2RenderingContext;
-      const vertexSource = translate(`${shaderData.vertexShaderPrelude}\n${shaderData.define}\n${DAYLIGHT_VERTEX}`, true, webgl2);
-      const fragmentSource = translate(DAYLIGHT_FRAGMENT, false, webgl2);
-      const shader = (type, source) => {
-        const object = gl.createShader(type);
-        gl.shaderSource(object, source);
-        gl.compileShader(object);
-        if (!gl.getShaderParameter(object, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(object) || "Shader failed");
-        return object;
-      };
-      const program = gl.createProgram();
-      gl.attachShader(program, shader(gl.VERTEX_SHADER, vertexSource));
-      gl.attachShader(program, shader(gl.FRAGMENT_SHADER, fragmentSource));
-      gl.linkProgram(program);
-      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program) || "Program failed");
-      const names = [
-        "u_projection_matrix",
-        "u_projection_fallback_matrix",
-        "u_projection_tile_mercator_coords",
-        "u_projection_clipping_plane",
-        "u_projection_transition",
-        "u_offset",
-        "u_sun",
-        "u_camera",
-        "u_lights",
-        "u_detail",
-        "u_ocean",
-        "u_detail_box",
-        "u_detail_on",
-        "u_lights_on",
-        "u_ocean_on",
-        "u_strength",
-        "u_gain",
-        "u_dusk",
-        "u_globe",
-      ];
-      return {
-        program,
-        position: gl.getAttribLocation(program, "a_pos"),
-        u: Object.fromEntries(names.map((name) => [name, gl.getUniformLocation(program, name)])),
-      };
-    };
+    const compile = (shaderData) =>
+      compileProgram(
+        gl,
+        `${shaderData.vertexShaderPrelude}\n${shaderData.define}\n${DAYLIGHT_VERTEX}`,
+        DAYLIGHT_FRAGMENT,
+        ["a_pos"],
+        [
+          ...PROJECTION_UNIFORMS,
+          "u_offset",
+          "u_sun",
+          "u_camera",
+          "u_lights",
+          "u_detail",
+          "u_ocean",
+          "u_detail_box",
+          "u_detail_on",
+          "u_lights_on",
+          "u_ocean_on",
+          "u_strength",
+          "u_gain",
+          "u_dusk",
+          "u_globe",
+        ]
+      );
 
     const buildMesh = () => {
       const n = GRID + 1;
@@ -914,11 +1036,21 @@ void main() {
       id: "daylight",
       type: "custom",
       renderingMode: "2d",
+      // Also after the WebGL context was lost and restored (the map then rebuilds its style
+      // without custom layers, and they are added again): every GL object is made afresh and
+      // the images already here are uploaded again.
       onAdd(map, context) {
         mapRef = map;
         gl = context;
         anisotropy = gl.getExtension("EXT_texture_filter_anisotropic");
-        buffers = buildMesh();
+        programs.clear();
+        buffers = null;
+        lightsTexture = null;
+        detailTexture = null;
+        oceanTexture = null;
+        lightsOn = 0;
+        detailBox = null;
+        pendingDetail = lastDetail;
         const fetchImage = (url, done) => {
           if (!url) return;
           const image = new Image();
@@ -933,16 +1065,21 @@ void main() {
           );
           image.src = url;
         };
-        fetchImage(lightsUrl, (image) => (pendingLights = image));
-        fetchImage(oceanUrl, (image) => (pendingOcean = image));
+        if (lightsImage) pendingLights = lightsImage;
+        else fetchImage(lightsUrl, (image) => (pendingLights = lightsImage = image));
+        if (oceanImage) pendingOcean = oceanImage;
+        else fetchImage(oceanUrl, (image) => (pendingOcean = oceanImage = image));
       },
       // A sharper night image for part of the world; box is [west, south, east, north].
       setDetail(image, box) {
-        pendingDetail = { image, box };
+        pendingDetail = lastDetail = { image, box };
         mapRef?.triggerRepaint();
       },
       render(context, args) {
-        if (!buffers) return;
+        if (!gl) return;
+        // Buffers, like textures, are made inside render(), where MapLibre expects other code
+        // to touch GL state.
+        if (!buffers) buffers = buildMesh();
         const state = getState();
         if (pendingLights) {
           lightsTexture = upload(lightsTexture, pendingLights);
@@ -973,11 +1110,7 @@ void main() {
         const data = args.defaultProjectionData;
         const { u } = program;
         gl.useProgram(program.program);
-        gl.uniformMatrix4fv(u.u_projection_matrix, false, Float32Array.from(data.mainMatrix));
-        if (u.u_projection_fallback_matrix) gl.uniformMatrix4fv(u.u_projection_fallback_matrix, false, Float32Array.from(data.fallbackMatrix));
-        if (u.u_projection_tile_mercator_coords) gl.uniform4f(u.u_projection_tile_mercator_coords, ...data.tileMercatorCoords);
-        if (u.u_projection_clipping_plane) gl.uniform4f(u.u_projection_clipping_plane, ...data.clippingPlane);
-        if (u.u_projection_transition) gl.uniform1f(u.u_projection_transition, data.projectionTransition);
+        setProjection(gl, u, data, projection, fallback);
         gl.uniform3f(u.u_sun, ...state.sun);
         gl.uniform3f(u.u_camera, ...state.camera);
         gl.uniform1f(u.u_strength, state.strength);
@@ -999,8 +1132,8 @@ void main() {
         gl.uniform1i(u.u_ocean, 2);
         gl.bindBuffer(gl.ARRAY_BUFFER, buffers.vertex);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.index);
-        gl.enableVertexAttribArray(program.position);
-        gl.vertexAttribPointer(program.position, 2, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(program.a_pos);
+        gl.vertexAttribPointer(program.a_pos, 2, gl.FLOAT, false, 0, 0);
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
         gl.disable(gl.DEPTH_TEST);
@@ -1012,7 +1145,7 @@ void main() {
           gl.uniform1f(u.u_offset, offset);
           gl.drawElements(gl.TRIANGLES, globe ? buffers.total : buffers.gridCount, gl.UNSIGNED_SHORT, 0);
         }
-        gl.disableVertexAttribArray(program.position);
+        gl.disableVertexAttribArray(program.a_pos);
         gl.activeTexture(gl.TEXTURE0);
       },
       onRemove() {
@@ -1029,6 +1162,594 @@ void main() {
         buffers = null;
         mapRef = null;
       },
+    };
+  };
+
+  /* ---------- the route: flight arcs lifted off the globe ----------
+     A custom WebGL layer draws each leg as an airline-style arc (flightArc): the great circle
+     on the ground, the height peak·sin(πt) above it, and ARC_LEAN of that height to one side.
+     The points are worked out in double precision (the GPU's own trigonometry
+     drifts by pixels at street zoom), again whenever the camera's height lowers or raises an
+     arc (ARC_ROOM), in the two forms the prelude's projectTile uses: on the unit globe raised
+     by the height, and in Mercator x, y and height (Mercator units; x runs on past the
+     antimeridian along a leg). The arcs are placed by the same matrices, blended between the
+     two as the map changes over. Each arc is a ribbon of constant screen width, built in the
+     vertex shader from the projected points either side (mitred joins, a round cap at each
+     end), and painted in one pass with the route's glow, dark casing, core and, on the newest
+     leg, flowing dashes, antialiased at every edge. The distance across the ribbon is
+     interpolated evenly on screen, not in perspective, so a segment that spans the view
+     keeps one width and its casing on both sides. On the globe each fragment is tested
+     against the sphere from the camera (whose position follows from the prelude's clipping
+     plane), so an arc fades out where the Earth hides it but stays in sight where it rises
+     above the limb. Legs are drawn oldest first, so the newest lies on top. */
+  const ROUTE_VERTEX = `in vec3 a_globe;
+in vec3 a_flat;
+in vec3 a_globe_prev;
+in vec3 a_flat_prev;
+in vec3 a_globe_next;
+in vec3 a_flat_next;
+in vec4 a_meta;
+uniform float u_offset;
+uniform float u_center_x;
+uniform vec2 u_viewport;
+uniform float u_half;
+uniform float u_near;
+out vec3 v_cross;
+out vec2 v_along;
+out vec3 v_world;
+const float EARTH_KM = 6371.0088;
+vec4 project(vec3 sphere, vec3 merc) {
+#ifdef GLOBE
+  vec4 g = u_projection_matrix * vec4(sphere, 1.0);
+  if (u_projection_transition > 0.999) return g;
+  merc.x += floor(u_center_x - merc.x + 0.5);
+  return mix(u_projection_fallback_matrix * vec4(merc, 1.0), g, u_projection_transition);
+#else
+  return u_projection_matrix * vec4(merc.x + u_offset, merc.yz, 1.0);
+#endif
+}
+// Where the segment from a point in front of the camera to one behind it meets the near limit.
+vec4 toNear(vec4 behind, vec4 front) {
+  return mix(front, behind, (front.w - u_near) / (front.w - behind.w));
+}
+vec2 screen(vec4 c) {
+  return c.xy / c.w * u_viewport * 0.5;
+}
+void main() {
+  vec4 c = project(a_globe, a_flat);
+  vec4 a = project(a_globe_prev, a_flat_prev);
+  vec4 b = project(a_globe_next, a_flat_next);
+  v_world = a_globe;
+  v_along = a_meta.yz;
+  vec2 across = vec2(a_meta.x, abs(a_meta.w)) * u_half;
+  // Each side's direction counts unless its neighbour is the one the point moved toward.
+  float before = 1.0;
+  float after = 1.0;
+  if (c.w < u_near) {
+    // Behind the camera (only if an arc ever climbed past it): the point moves back along
+    // its segment to where it comes in front, taking its distance flown with it.
+    if (a.w >= u_near) {
+      float s = (a.w - u_near) / (a.w - c.w);
+      v_along += vec2(-1.0, 1.0) * (1.0 - s) * distance(a_globe, a_globe_prev) * EARTH_KM;
+      v_world = mix(a_globe_prev, a_globe, s);
+      c = mix(a, c, s);
+      after = 0.0;
+    } else if (b.w >= u_near) {
+      float s = (b.w - u_near) / (b.w - c.w);
+      v_along += vec2(1.0, -1.0) * (1.0 - s) * distance(a_globe, a_globe_next) * EARTH_KM;
+      v_world = mix(a_globe_next, a_globe, s);
+      c = mix(b, c, s);
+      before = 0.0;
+    } else {
+      v_cross = vec3(0.0, 0.0, 1.0);
+      gl_Position = vec4(c.xy, 0.0, c.w);
+      return;
+    }
+  } else {
+    if (a.w < u_near) a = toNear(a, c);
+    if (b.w < u_near) b = toNear(b, c);
+  }
+  vec2 sc = screen(c);
+  vec2 d0 = before > 0.5 ? sc - screen(a) : vec2(0.0);
+  vec2 d1 = after > 0.5 ? screen(b) - sc : vec2(0.0);
+  float l0 = length(d0);
+  float l1 = length(d1);
+  vec2 t0 = l0 > 0.001 ? d0 / l0 : vec2(0.0);
+  vec2 t1 = l1 > 0.001 ? d1 / l1 : vec2(0.0);
+  vec2 dir = t0 + t1;
+  float ld = length(dir);
+  dir = ld > 0.001 ? dir / ld : (l1 > 0.001 ? t1 : (l0 > 0.001 ? t0 : vec2(1.0, 0.0)));
+  vec2 normal = vec2(-dir.y, dir.x);
+  // A mitre keeps the ribbon its full width through a bend (up to twice as long at a sharp one).
+  vec2 edge = l0 > 0.001 ? t0 : (l1 > 0.001 ? t1 : dir);
+  float mitre = 1.0 / max(abs(dot(normal, vec2(-edge.y, edge.x))), 0.5);
+  float reach = u_half * mitre;
+  // On the inside of a bend tighter than the ribbon is wide (an arc turning over the limb)
+  // the sides would cross and fold over: there the inner side stops within half a segment
+  // of the point, trimming the glow instead.
+  float turn = t0.x * t1.y - t0.y * t1.x;
+  float bend = abs(dot(normal, t0));
+  if (a_meta.x * turn > 0.0 && bend > 0.001) reach = min(reach, 0.5 * min(l0, l1) / bend);
+  across.x = a_meta.x * reach / mitre;
+  // Multiplied by w here and divided by its interpolated value in the fragment shader, the
+  // distance across comes out interpolated linearly on screen.
+  v_cross = vec3(across * c.w, c.w);
+  vec2 offset = normal * (a_meta.x * reach) + dir * (a_meta.w * u_half);
+  gl_Position = vec4((sc + offset) / (u_viewport * 0.5) * c.w, 0.0, c.w);
+}`;
+
+  // A number as a GLSL float literal.
+  const glslFloat = (value) => (Number.isInteger(value) ? value.toFixed(1) : String(value));
+  const DASH_PERIOD = DASH.gap + DASH.dash;
+
+  const ROUTE_FRAGMENT = `precision highp float;
+in vec3 v_cross;
+in vec2 v_along;
+in vec3 v_world;
+uniform vec4 u_glow;
+uniform vec4 u_casing;
+uniform vec4 u_core;
+uniform vec4 u_flow;
+uniform vec4 u_widths;
+uniform vec2 u_blur;
+uniform vec4 u_dash;
+uniform vec4 u_eye;
+out vec4 fragColor;
+// Coverage across a line of this half width and blur, as MapLibre draws its lines (device px).
+float band(float d, float halfWidth, float blur) {
+  return clamp((halfWidth + 0.5 - d) / (blur + 1.0), 0.0, 1.0);
+}
+vec4 paint(vec4 color, float cover) {
+  return vec4(color.rgb, 1.0) * (color.a * cover);
+}
+void main() {
+  float d = length(v_cross.xy / v_cross.z);
+  vec4 c = paint(u_glow, band(d, u_widths.x, u_blur.x));
+  vec4 top = paint(u_casing, band(d, u_widths.y, u_blur.y));
+  c = top + c * (1.0 - top.a);
+  top = paint(u_core, band(d, u_widths.z, 0.0));
+  c = top + c * (1.0 - top.a);
+  if (u_flow.a > 0.0) {
+    // DASH: dashes ${DASH.dash} widths long and ${DASH.gap} apart, measured from the nearer end
+    // of the leg (small numbers keep them sharp close up); k is the distance from the nearest
+    // dash's middle.
+    float u = v_along.x < v_along.y ? v_along.x * u_dash.x - u_dash.y : u_dash.z - v_along.y * u_dash.x;
+    float k = abs(mod(u - ${glslFloat(DASH.gap / 2)}, ${glslFloat(DASH_PERIOD)}) - ${glslFloat(DASH_PERIOD / 2)});
+    float dash = 1.0 - smoothstep(${glslFloat(DASH.dash / 2)} - u_dash.w, ${glslFloat(DASH.dash / 2)} + u_dash.w, k);
+    top = paint(u_flow, band(d, u_widths.w, 0.0) * dash);
+    c = top + c * (1.0 - top.a);
+  }
+  if (u_eye.w > 0.0) {
+    // Hidden where the line of sight from the camera passes through the Earth.
+    vec3 ray = v_world - u_eye.xyz;
+    float t = clamp(-dot(u_eye.xyz, ray) / max(dot(ray, ray), 1e-12), 0.0, 1.0);
+    c *= mix(1.0, smoothstep(0.994, 1.0, length(u_eye.xyz + ray * t)), u_eye.w);
+  }
+  fragColor = c;
+}`;
+
+  const EARTH_KM = EARTH_RADIUS / 1000;
+
+  // A point of an arc as the vertex shader takes it, written to out from offset: from its
+  // position (x, y, z in Earth radii, axes as toVec) and the longitude of the ground under it
+  // (unwrapped along the leg), on the unit globe (MapLibre's axes: x toward 90°E, y north,
+  // z toward 0°, 0°), then Mercator x, y and its height in Mercator units.
+  const arcPoint = (x, y, z, lonNear, out, offset) => {
+    const across = Math.hypot(x, y);
+    const lat = Math.atan2(z, across);
+    const lon = lonNear + wrap180(Math.atan2(y, x) / RAD - lonNear);
+    out[offset] = y;
+    out[offset + 1] = z;
+    out[offset + 2] = x;
+    out[offset + 3] = (lon + 180) / 360;
+    out[offset + 4] = 0.5 - Math.log(Math.tan(Math.PI / 4 + lat / 2)) / (2 * Math.PI);
+    out[offset + 5] = (Math.hypot(across, z) - 1) / (2 * Math.PI * Math.cos(lat));
+  };
+
+  // A leg's flight path from a to b: points along the great circle on the ground (about two a
+  // degree, at least 32 segments; longitudes unwrapped), its peak height in Earth radii, and
+  // the unit vector it leans along (see ARC_LEAN): away from `facing`, the place the
+  // whole-globe view looks down on, so that seen from there it opens out; or, if its great
+  // circle runs within 3° of that place (it would be edge-on whichever way it leaned), to
+  // the right of its way, so two legs flown opposite ways along one corridor part.
+  const flightArc = (a, b, facing) => {
+    const omega = angleBetween(a, b);
+    const segments = Math.max(32, Math.ceil(omega / RAD / 0.5));
+    const ground = new Float64Array((segments + 1) * 3);
+    const lon = new Float64Array(segments + 1);
+    greatCircle(a, b, segments).forEach((point, i) => {
+      ground.set(toVec(point), i * 3);
+      lon[i] = point[0];
+    });
+    const [va, vb] = [toVec(a), toVec(b)];
+    const right = [vb[1] * va[2] - vb[2] * va[1], vb[2] * va[0] - vb[0] * va[2], vb[0] * va[1] - vb[1] * va[0]];
+    const length = Math.hypot(...right);
+    const unit = length > 1e-12 ? right.map((value) => value / length) : [0, 0, 0];
+    const toward = facing ? dot(unit, toVec(facing)) : 0;
+    const lean = toward > Math.sin(3 * RAD) ? -1 : 1;
+    return { omega, peak: ARC_RISE * omega ** ARC_POWER, segments, ground, lon, lean: unit.map((value) => value * lean) };
+  };
+
+  // The length of the part of the segment from (x0, y0) to (x1, y1) inside the rectangle
+  // [0, width] × [0, height].
+  const lengthInside = (x0, y0, x1, y1, width, height) => {
+    const dx = x1 - x0;
+    const dy = y1 - y0;
+    let from = 0;
+    let to = 1;
+    for (let edge = 0; edge < 4; edge += 1) {
+      const p = edge === 0 ? -dx : edge === 1 ? dx : edge === 2 ? -dy : dy;
+      const q = edge === 0 ? x0 : edge === 1 ? width - x0 : edge === 2 ? y0 : height - y0;
+      if (p === 0) {
+        if (q < 0) return 0;
+      } else if (p < 0) from = Math.max(from, q / p);
+      else to = Math.min(to, q / p);
+    }
+    return to > from ? (to - from) * Math.hypot(dx, dy) : 0;
+  };
+  // The pin at each end of a leg covers about this much of it (CSS px).
+  const PIN_COVER = 14;
+
+  // legs: [{ age, ...flightArc() }], oldest first. getState() returns one object, updated in
+  // place: { night (the street map's palette), flow (dashes shown), dash (their offset, in
+  // line widths) }. onFail(error) runs once if the layer cannot draw.
+  const createRouteLayer = ({ legs, getState, onFail }) => {
+    // Each vertex: the point, the one before and the one after (each on the globe and flat,
+    // 3 floats), and a_meta (side, km flown, km still to fly, end cap).
+    const ATTRIBUTES = ["a_globe", "a_flat", "a_globe_prev", "a_flat_prev", "a_globe_next", "a_flat_next", "a_meta"];
+    const FLOATS = 22;
+    // Per leg: its vertices in the buffer (a cap point at each end, then every point, each
+    // as the ribbon's two sides), and its points as flown now: lift (the share of its full
+    // height), side (how far it leans, per unit of height), pos (arcPoint()s), along (km
+    // flown to each) and km (in all).
+    let total = 0;
+    const ranges = legs.map((leg) => {
+      const points = leg.segments + 1;
+      const range = {
+        ...leg,
+        first: total,
+        count: (points + 2) * 2,
+        lift: -1,
+        side: -1,
+        km: 0,
+        pos: new Float64Array(points * 6),
+        along: new Float64Array(points),
+      };
+      total += range.count;
+      return range;
+    });
+    const vertices = new Float32Array(total * FLOATS);
+    const newest = ranges.find((range) => range.age === 0) || null;
+    let mapRef = null;
+    let gl = null;
+    let buffer = null;
+    let failed = false;
+    const programs = new Map();
+    const projection = new Float32Array(16);
+    const fallback = new Float32Array(16);
+    const eye = [0, 0, 0];
+    // The last frame's placement, kept for measuring and locate().
+    const frame = {
+      drawn: false,
+      globe: false,
+      main: new Float64Array(16),
+      fallback: new Float64Array(16),
+      transition: 1,
+      plane: new Float64Array(4),
+      eye: false,
+      centerX: 0,
+      width: 1,
+      height: 1,
+    };
+    const placed = { x: 0, y: 0, visible: false };
+    // Whether the newest leg showed enough in the last frame for its dashes to be seen.
+    let dashesInView = true;
+
+    // One side of a point of the ribbon, written from float f; returns where the next starts.
+    const putVertex = (range, f, i, previous, next, side, cap) => {
+      const { pos, along } = range;
+      for (let j = 0; j < 6; j += 1) {
+        vertices[f + j] = pos[i * 6 + j];
+        vertices[f + 6 + j] = pos[previous * 6 + j];
+        vertices[f + 12 + j] = pos[next * 6 + j];
+      }
+      vertices[f + 18] = side;
+      vertices[f + 19] = along[i];
+      vertices[f + 20] = range.km - along[i];
+      vertices[f + 21] = cap;
+      return f + FLOATS;
+    };
+    // Flies a leg at this share of its full height, leaning this far: its points, and its
+    // vertices.
+    const raise = (range, lift, side) => {
+      const { segments: end, ground, lon, lean, pos, along } = range;
+      range.lift = lift;
+      range.side = side;
+      let flown = 0;
+      let px = 0;
+      let py = 0;
+      let pz = 0;
+      for (let i = 0; i <= end; i += 1) {
+        const h = i === 0 || i === end ? 0 : lift * range.peak * Math.sin((Math.PI * i) / end);
+        const k = i * 3;
+        const x = ground[k] * (1 + h) + lean[0] * side * h;
+        const y = ground[k + 1] * (1 + h) + lean[1] * side * h;
+        const z = ground[k + 2] * (1 + h) + lean[2] * side * h;
+        if (i > 0) flown += Math.hypot(x - px, y - py, z - pz) * EARTH_KM;
+        px = x;
+        py = y;
+        pz = z;
+        along[i] = flown;
+        arcPoint(x, y, z, lon[i], pos, i * 6);
+      }
+      range.km = flown;
+      let f = range.first * FLOATS;
+      for (let side = -1; side <= 1; side += 2) f = putVertex(range, f, 0, 0, 1, side, -1);
+      for (let i = 0; i <= end; i += 1) {
+        for (let side = -1; side <= 1; side += 2) f = putVertex(range, f, i, Math.max(0, i - 1), Math.min(end, i + 1), side, 0);
+      }
+      for (let side = -1; side <= 1; side += 2) f = putVertex(range, f, end, end - 1, end, side, 1);
+    };
+    for (const range of ranges) raise(range, 1, ARC_LEAN);
+
+    const compile = (shaderData) => {
+      const program = compileProgram(gl, `${shaderData.vertexShaderPrelude}\n${shaderData.define}\n${ROUTE_VERTEX}`, ROUTE_FRAGMENT, ATTRIBUTES, [
+        ...PROJECTION_UNIFORMS,
+        "u_offset",
+        "u_center_x",
+        "u_viewport",
+        "u_half",
+        "u_near",
+        "u_glow",
+        "u_casing",
+        "u_core",
+        "u_flow",
+        "u_widths",
+        "u_blur",
+        "u_dash",
+        "u_eye",
+      ]);
+      program.attributes = ATTRIBUTES.map((name) => program[name]);
+      return program;
+    };
+
+    const fail = (error) => {
+      if (failed) return;
+      failed = true;
+      // Not from inside a frame: the map's style is changed in answer.
+      setTimeout(() => onFail?.(error), 0);
+    };
+
+    const uniformColor = (location, rgb, alpha) => gl.uniform4f(location, rgb[0], rgb[1], rgb[2], alpha);
+
+    // The camera on the unit globe: the clipping plane is the plane of the horizon, its normal
+    // toward the camera and its offset minus one over the camera's distance from the centre.
+    const findEye = (plane) => {
+      if (!(plane[3] < 0)) return false;
+      for (let i = 0; i < 3; i += 1) eye[i] = plane[i] / -plane[3];
+      return true;
+    };
+
+    // Where an arcPoint() (from pos[p]) landed in the last frame, in CSS px, and whether it
+    // was in sight there (in front of the camera, not behind the Earth), into placed. Mirrors
+    // the shaders.
+    const place = (pos, p) => {
+      const fx = pos[p + 3] + Math.floor(frame.centerX - pos[p + 3] + 0.5);
+      const fy = pos[p + 4];
+      const fz = pos[p + 5];
+      const m = frame.main;
+      let x;
+      let y;
+      let w;
+      if (frame.globe) {
+        const gx = pos[p];
+        const gy = pos[p + 1];
+        const gz = pos[p + 2];
+        x = m[0] * gx + m[4] * gy + m[8] * gz + m[12];
+        y = m[1] * gx + m[5] * gy + m[9] * gz + m[13];
+        w = m[3] * gx + m[7] * gy + m[11] * gz + m[15];
+        const t = frame.transition;
+        if (t <= 0.999) {
+          const n = frame.fallback;
+          const x2 = n[0] * fx + n[4] * fy + n[8] * fz + n[12];
+          const y2 = n[1] * fx + n[5] * fy + n[9] * fz + n[13];
+          const w2 = n[3] * fx + n[7] * fy + n[11] * fz + n[15];
+          x = x2 + (x - x2) * t;
+          y = y2 + (y - y2) * t;
+          w = w2 + (w - w2) * t;
+        }
+      } else {
+        x = m[0] * fx + m[4] * fy + m[8] * fz + m[12];
+        y = m[1] * fx + m[5] * fy + m[9] * fz + m[13];
+        w = m[3] * fx + m[7] * fy + m[11] * fz + m[15];
+      }
+      placed.x = ((x / w + 1) / 2) * frame.width;
+      placed.y = ((1 - y / w) / 2) * frame.height;
+      placed.visible = w > 0;
+      if (placed.visible && frame.eye) {
+        const rx = pos[p] - eye[0];
+        const ry = pos[p + 1] - eye[1];
+        const rz = pos[p + 2] - eye[2];
+        const t = Math.max(0, Math.min(1, -(eye[0] * rx + eye[1] * ry + eye[2] * rz) / (rx * rx + ry * ry + rz * rz)));
+        placed.visible = Math.hypot(eye[0] + rx * t, eye[1] + ry * t, eye[2] + rz * t) > 0.997;
+      }
+      return placed;
+    };
+
+    // How much of a leg the last frame showed, in CSS px, less what its end pins cover.
+    const measure = (range) => {
+      let length = 0;
+      let x0 = 0;
+      let y0 = 0;
+      let seen = false;
+      for (let i = 0; i <= range.segments; i += 1) {
+        const { x, y, visible } = place(range.pos, i * 6);
+        if (visible && seen) length += lengthInside(x0, y0, x, y, frame.width, frame.height);
+        const onScreen = visible && x >= 0 && y >= 0 && x <= frame.width && y <= frame.height;
+        if (onScreen && (i === 0 || i === range.segments)) length -= PIN_COVER;
+        x0 = x;
+        y0 = y;
+        seen = visible;
+      }
+      return length;
+    };
+
+    return {
+      id: "route-arcs",
+      type: "custom",
+      renderingMode: "2d",
+      // Also after the WebGL context was restored: everything is made afresh.
+      onAdd(map, context) {
+        mapRef = map;
+        gl = context;
+        programs.clear();
+        buffer = null;
+        frame.drawn = false;
+      },
+      render(context, args) {
+        if (!gl || failed) return;
+        const variant = args.shaderData.variantName;
+        let program = programs.get(variant);
+        if (program === undefined) {
+          try {
+            program = compile(args.shaderData);
+          } catch (error) {
+            program = null;
+            fail(error);
+          }
+          programs.set(variant, program);
+        }
+        if (!program) return;
+        const transform = mapRef.transform;
+        const zoom = transform.zoom;
+        // Each arc's height and lean for this camera (ARC_ROOM, ARC_SWAY): the camera's height in
+        // Earth radii is its distance above the centre of the view over the globe's radius in
+        // px (as MapLibre places it).
+        const altitude = (transform.cameraToCenterDistance * 2 * Math.PI * Math.cos(transform.center.lat * RAD)) / transform.worldSize;
+        let raised = false;
+        for (let leg = 0; leg < ranges.length; leg += 1) {
+          const range = ranges[leg];
+          const lift = Math.min(1, (ARC_ROOM * altitude) / range.peak);
+          const side = Math.min(ARC_LEAN, (ARC_SWAY * altitude) / (lift * range.peak));
+          if (Math.abs(lift - range.lift) > range.lift * 1e-4 || Math.abs(side - range.side) > range.side * 1e-4) {
+            raise(range, lift, side);
+            raised = true;
+          }
+        }
+        if (!buffer) {
+          buffer = gl.createBuffer();
+          gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+          gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.DYNAMIC_DRAW);
+        } else if (raised) {
+          gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+          gl.bufferSubData(gl.ARRAY_BUFFER, 0, vertices);
+        }
+        const projectionData = args.defaultProjectionData;
+        const state = getState();
+        const ratio = gl.drawingBufferWidth / Math.max(1, transform.width);
+        const globe = variant === "globe";
+        const centerX = (transform.center.lng + 180) / 360;
+        frame.drawn = true;
+        frame.globe = globe;
+        frame.main.set(projectionData.mainMatrix);
+        if (globe) {
+          frame.fallback.set(projectionData.fallbackMatrix);
+          frame.plane.set(projectionData.clippingPlane);
+        }
+        frame.transition = projectionData.projectionTransition;
+        frame.eye = globe && findEye(frame.plane);
+        frame.centerX = centerX;
+        frame.width = transform.width;
+        frame.height = transform.height;
+        const { u } = program;
+        gl.useProgram(program.program);
+        setProjection(gl, u, projectionData, projection, fallback);
+        gl.uniform1f(u.u_center_x, centerX);
+        gl.uniform2f(u.u_viewport, gl.drawingBufferWidth, gl.drawingBufferHeight);
+        gl.uniform1f(u.u_near, transform.cameraToCenterDistance * 0.01);
+        if (frame.eye) gl.uniform4f(u.u_eye, eye[0], eye[1], eye[2], 1);
+        else gl.uniform4f(u.u_eye, 0, 0, 0, 0);
+        // Sizes in device px. The glow is the widest part; the ribbon is a pixel wider still.
+        const glow = (ramp(ROUTE_WIDTH.glow, zoom) / 2) * ratio;
+        gl.uniform1f(u.u_half, glow + 1);
+        gl.uniform2f(u.u_blur, ramp(ROUTE_WIDTH.glowBlur, zoom) * ratio, ROUTE_CASING_BLUR * ratio);
+        // Dashes are measured in flow-line widths, from the km flown at the view's scale.
+        const flowWidth = ramp(ROUTE_WIDTH.flow, zoom) * ratio;
+        const pxPerKm = ((transform.worldSize / (2 * Math.PI * Math.cos(transform.center.lat * RAD))) * ratio) / EARTH_KM;
+        const widthsPerKm = pxPerKm / flowWidth;
+        const street = zoom >= IMAGERY_STEP;
+        const colors = street ? (state.night ? ROUTE_RGB.dark : ROUTE_RGB.light) : ROUTE_RGB.imagery;
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+        const stride = FLOATS * 4;
+        const { attributes } = program;
+        for (let i = 0; i < attributes.length; i += 1) {
+          if (attributes[i] < 0) continue;
+          gl.enableVertexAttribArray(attributes[i]);
+          gl.vertexAttribPointer(attributes[i], i === attributes.length - 1 ? 4 : 3, gl.FLOAT, false, stride, i * 12);
+        }
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+        gl.disable(gl.DEPTH_TEST);
+        gl.disable(gl.STENCIL_TEST);
+        gl.disable(gl.CULL_FACE);
+        // The flat map repeats the world east and west, and a leg's longitudes run on past
+        // ±180°: draw the copies either side of the one in view.
+        const world = Math.floor(centerX);
+        for (let leg = 0; leg < ranges.length; leg += 1) {
+          const range = ranges[leg];
+          const isNewest = range === newest;
+          uniformColor(u.u_glow, colors.glow, ramp(ROUTE_OPACITY.glow, range.age));
+          uniformColor(u.u_casing, colors.casing, ramp(street ? ROUTE_OPACITY.casingStreet : ROUTE_OPACITY.casing, range.age));
+          uniformColor(u.u_core, isNewest ? colors.core : colors.coreOld, ramp(street ? ROUTE_OPACITY.coreStreet : ROUTE_OPACITY.core, range.age));
+          uniformColor(u.u_flow, colors.flow, isNewest && state.flow ? ROUTE_OPACITY.flow : 0);
+          // Where the dashes stand at the leg's end, worked out here in double precision.
+          const endPhase = (((range.km * widthsPerKm - state.dash) % DASH_PERIOD) + DASH_PERIOD) % DASH_PERIOD;
+          gl.uniform4f(u.u_dash, widthsPerKm, state.dash, endPhase, 0.5 / flowWidth);
+          gl.uniform4f(
+            u.u_widths,
+            glow,
+            (ramp(ROUTE_WIDTH.casing, zoom) / 2) * ratio,
+            (ramp(isNewest ? ROUTE_WIDTH.core : ROUTE_WIDTH.coreOld, zoom) / 2) * ratio,
+            flowWidth / 2
+          );
+          for (let copy = globe ? 0 : -1; copy <= (globe ? 0 : 1); copy += 1) {
+            gl.uniform1f(u.u_offset, world + copy);
+            gl.drawArrays(gl.TRIANGLE_STRIP, range.first, range.count);
+          }
+        }
+        for (let i = 0; i < attributes.length; i += 1) if (attributes[i] >= 0) gl.disableVertexAttribArray(attributes[i]);
+        // The dashes need redrawing only while at least one of their periods is in sight.
+        dashesInView = Boolean(newest && state.flow) && measure(newest) >= DASH_PERIOD * ramp(ROUTE_WIDTH.flow, zoom);
+      },
+      onRemove() {
+        if (gl) {
+          for (const program of programs.values()) if (program) gl.deleteProgram(program.program);
+          if (buffer) gl.deleteBuffer(buffer);
+        }
+        programs.clear();
+        buffer = null;
+        mapRef = null;
+      },
+      // Whether the newest leg's dashes were in sight in the last frame drawn (until the
+      // first frame, assumed so).
+      dashesInView: () => dashesInView,
+      // A leg's point a share t of the way along, as flown now: where the last frame put it
+      // on screen in CSS px and whether it was in sight, and its height in km (for tests).
+      locate(index, t) {
+        const range = ranges[index];
+        if (!range || !frame.drawn || !mapRef) return null;
+        const { ground, segments, lean, omega } = range;
+        const end = segments * 3;
+        const [ka, kb] = omega > 1e-9 ? [Math.sin((1 - t) * omega) / Math.sin(omega), Math.sin(t * omega) / Math.sin(omega)] : [1, 0];
+        const h = range.lift * range.peak * Math.sin(Math.PI * t);
+        const point = [0, 1, 2].map((k) => (ka * ground[k] + kb * ground[end + k]) * (1 + h) + lean[k] * range.side * h);
+        const pos = new Float64Array(6);
+        arcPoint(...point, range.lon[Math.round(t * segments)], pos, 0);
+        const { x, y, visible } = place(pos, 0);
+        return { x, y, visible, km: (h * EARTH_RADIUS) / 1000 };
+      },
+      // The share of its full height each leg flies at now.
+      lifts: () => ranges.map((range) => range.lift),
     };
   };
 
@@ -1061,24 +1782,27 @@ void main() {
     const coords = new Map(places.map((stop) => [stop.id, [Number(stop.lon), Number(stop.lat)]]));
     const currentId = places.find((stop) => stop.current)?.id || null;
 
-    // Route legs, newest first by age 0.
-    const legs = [];
-    for (let i = 1; i < places.length; i += 1) {
-      const from = coords.get(places[i - 1].id);
-      const to = coords.get(places[i].id);
-      if (angleBetween(from, to) < 1e-6) continue;
-      legs.push({
-        type: "Feature",
-        properties: { age: places.length - 1 - i, from: places[i - 1].id, to: places[i].id },
-        geometry: { type: "LineString", coordinates: greatCircle(from, to) },
-      });
-    }
-    const routeData = { type: "FeatureCollection", features: legs };
-
     // The reference point: the current stop (else the latest). The overview faces it.
     const reference = places.find((stop) => stop.current) || places[places.length - 1];
     const overviewCenter = coords.get(reference.id);
     const referenceName = reference.short || reference.name;
+
+    // Route legs in time order, the newest (age 0) last: flight arcs (leaning so that the
+    // overview sees them open), and the same legs as lines on the ground for the fallback.
+    const legs = [];
+    const flights = [];
+    for (let i = 1; i < places.length; i += 1) {
+      const from = coords.get(places[i - 1].id);
+      const to = coords.get(places[i].id);
+      if (angleBetween(from, to) < 1e-6) continue;
+      const properties = { age: places.length - 1 - i, from: places[i - 1].id, to: places[i].id };
+      legs.push({ type: "Feature", properties, geometry: { type: "LineString", coordinates: greatCircle(from, to) } });
+      flights.push({ ...properties, ...flightArc(from, to, overviewCenter), middle: toLonLat(toVec(from).map((value, k) => value + toVec(to)[k])) });
+    }
+    const routeData = { type: "FeatureCollection", features: legs };
+    // How far the highest arc reaches from the Earth's centre, in Earth radii (leaning
+    // sideways adds a little to its height).
+    const arcReach = Math.max(1, ...flights.map(({ peak }) => Math.hypot(1 + peak, ARC_LEAN * peak)));
 
     /* Time. "live" follows the real clock; "fixed" holds one moment (the test hook or
        setTime()). */
@@ -1099,6 +1823,9 @@ void main() {
 
     figure.hidden = false;
     figure.classList.add("is-loading");
+    // Reduced motion, read once here and then kept up to date by its change event (reading
+    // the media query on every frame would keep Chromium from sending that event).
+    let motionReduced = reducedMotion.matches;
 
     let map = null;
     let destroyed = false;
@@ -1292,20 +2019,55 @@ void main() {
     };
 
     /* Views */
-    const overviewZoom = () => {
-      const size = Math.min(canvasHost.clientWidth, canvasHost.clientHeight) || 300;
+    const NO_PADDING = { top: 0, bottom: 0, left: 0, right: 0 };
+    // The whole-globe view: its zoom, and the room kept clear over the globe (padding).
+    const overviewFit = () => {
+      const width = canvasHost.clientWidth || 300;
+      const height = canvasHost.clientHeight || 300;
       // The globe's radius is worldSize / 2π / cos(latitude) at zoom z (worldSize = 512·2^z).
       // The camera's perspective shows a disc smaller than that, so these fill roughly 88%
       // of a square frame and 86% of the height of a wide one, the glow just inside.
-      const fill = canvasHost.clientWidth > canvasHost.clientHeight * 1.2 ? 1.15 : 1.04;
-      const radius = (size * fill) / 2;
-      return Math.log2((radius * 2 * Math.PI * Math.cos(overviewCenter[1] * RAD)) / 512);
+      const fill = width > height * 1.2 ? 1.15 : 1.04;
+      let radius = (Math.min(width, height) * fill) / 2;
+      // The flight arcs rise above the globe, up to arcReach Earth radii from its centre:
+      // how far out that reaches on screen for a globe r px in radius (seen by a camera
+      // MapLibre puts 1.5 frame heights above the globe's surface).
+      const focal = map ? map.transform.cameraToCenterDistance : 1.5 * height;
+      const reach = (r) => (focal * r * arcReach) / Math.sqrt((focal + r) ** 2 - (r * arcReach) ** 2);
+      // Where they would pass under the clock (a wide frame: a phone's, the map window's),
+      // the globe moves down below it.
+      let top = 0;
+      if (clockEl && !clockEl.hidden) {
+        const frameBox = canvasHost.getBoundingClientRect();
+        const clockBox = clockEl.getBoundingClientRect();
+        const bottom = clockBox.bottom - frameBox.top + 4;
+        if (clockBox.width && clockBox.right - frameBox.left > width / 2 - reach(radius) && height / 2 - reach(radius) < bottom) top = bottom;
+      }
+      // And it shrinks until the arcs fit.
+      const room = (height - top) / 2 - 4;
+      if (reach(radius) > room) {
+        let [low, high] = [0, radius];
+        for (let i = 0; i < 30; i += 1) {
+          const middle = (low + high) / 2;
+          if (reach(middle) > room) high = middle;
+          else low = middle;
+        }
+        radius = low;
+      }
+      return {
+        zoom: Math.log2((Math.max(radius, 1) * 2 * Math.PI * Math.cos(overviewCenter[1] * RAD)) / 512),
+        padding: { ...NO_PADDING, top },
+      };
     };
-    const overviewView = () => ({ center: overviewCenter, zoom: overviewZoom(), bearing: 0, pitch: 0 });
+    const overviewZoom = () => overviewFit().zoom;
+    const overviewView = () => {
+      const { zoom, padding } = overviewFit();
+      return { center: overviewCenter, zoom, padding, bearing: 0, pitch: 0 };
+    };
 
     const move = (view, animate) => {
       if (!map) return;
-      if (!animate || reducedMotion.matches) map.jumpTo(view);
+      if (!animate || motionReduced) map.jumpTo(view);
       else {
         sound("whoosh");
         map.flyTo({ ...view, speed: 1.15, curve: 1.45, essential: false });
@@ -1325,7 +2087,7 @@ void main() {
       const detail = vectorFailed && !baseShown ? OFFLINE_ZOOM : DETAIL_ZOOM;
       const zoom = map.getZoom() > detail + 2 ? map.getZoom() : detail;
       atOverview = false;
-      move({ center: lngLat, zoom, bearing: 0, pitch: 0 }, animate);
+      move({ center: lngLat, zoom, bearing: 0, pitch: 0, padding: NO_PADDING }, animate);
     };
 
     const applySelect = (id, { animate = true, overview = false } = {}) => {
@@ -1387,6 +2149,67 @@ void main() {
       oceanUrl: tilesBase ? `${tilesBase}/ocean-mask.png` : null,
       getState: daylightState,
     });
+
+    /* The route: flight arcs ("arcs"), or, if their layer cannot draw, the hidden lines on the
+       ground ("lines"). Never both. */
+    const SURFACE_ROUTE = ["route-glow", "route-case", "route", "route-flow"];
+    let routeDrawn = "arcs";
+    let dashOffset = 0;
+    const routeState = { night: false, flow: true, dash: 0 };
+    const arcs = createRouteLayer({
+      legs: flights,
+      getState: () => {
+        routeState.night = nightPalette;
+        routeState.flow = dashesShown;
+        routeState.dash = dashOffset;
+        return routeState;
+      },
+      onFail: (error) => useSurfaceRoute(error),
+    });
+    const useSurfaceRoute = (error) => {
+      if (routeDrawn !== "arcs" || destroyed) return;
+      routeDrawn = "lines";
+      console.warn("Journey map flight arcs unavailable; the route is drawn on the ground", error);
+      if (!map) return;
+      try {
+        if (map.getLayer(arcs.id)) map.removeLayer(arcs.id);
+      } catch (removeError) {
+        /* it draws nothing once failed */
+      }
+      for (const id of SURFACE_ROUTE) if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", "visible");
+      updateFlow();
+    };
+    // The custom layers: night over the imagery (under the borders), the arcs over the borders.
+    // Over the imagery the arcs fly over the labels too; on the street map, where they come
+    // down close to the ground, they pass under the street names and places.
+    let arcsOver = null;
+    const arcsBefore = () => {
+      if (map.getZoom() < IMAGERY_STEP) return undefined;
+      return map.getLayer("label-road") ? "label-road" : undefined;
+    };
+    const placeArcs = () => {
+      if (routeDrawn !== "arcs" || !map?.getLayer(arcs.id)) return;
+      const over = map.getZoom() < IMAGERY_STEP;
+      if (over === arcsOver) return;
+      arcsOver = over;
+      map.moveLayer(arcs.id, arcsBefore());
+    };
+    const addOverlays = () => {
+      try {
+        if (!map.getLayer(daylight.id)) map.addLayer(daylight, map.getLayer("border-state") ? "border-state" : undefined);
+      } catch (error) {
+        console.warn("Journey map daylight layer unavailable", error);
+      }
+      if (routeDrawn !== "arcs") return;
+      try {
+        if (!map.getLayer(arcs.id)) {
+          map.addLayer(arcs, arcsBefore());
+          arcsOver = map.getZoom() < IMAGERY_STEP;
+        }
+      } catch (error) {
+        useSurfaceRoute(error);
+      }
+    };
 
     /* The space around the globe: a glow just beyond the limb, brightest toward the sun, and
        a starfield that drifts a little as the globe turns. Both are CSS layers under the
@@ -1711,7 +2534,7 @@ void main() {
         for (const a of points) for (const b of points) spread = Math.max(spread, Math.hypot(a.x - b.x, a.y - b.y));
         const target = Math.min(MAX_ZOOM - 1, map.getZoom() + Math.max(1.5, Math.log2((CLUSTER_PX * 3.2) / Math.max(spread, 0.05))));
         const sumVec = group.map((member) => toVec(coords.get(member))).reduce((acc, v) => [acc[0] + v[0], acc[1] + v[1], acc[2] + v[2]], [0, 0, 0]);
-        move({ center: toLonLat(sumVec), zoom: target, bearing: 0, pitch: 0 }, true);
+        move({ center: toLonLat(sumVec), zoom: target, bearing: 0, pitch: 0, padding: NO_PADDING }, true);
         announce(`Zoomed in on ${listNames(group)}`);
         return;
       }
@@ -1737,7 +2560,7 @@ void main() {
       const button = event.target.closest("button[data-map-zoom]");
       if (!button || !map || !ready) return;
       const kind = button.dataset.mapZoom;
-      const duration = reducedMotion.matches ? 0 : 400;
+      const duration = motionReduced ? 0 : 400;
       if (kind === "in" || kind === "out") {
         atOverview = false;
         sound("zoom");
@@ -1768,12 +2591,16 @@ void main() {
     // After the frame has changed size (the window resized, or the figure moved between the
     // pane and the map window): fit the canvas to it, let the globe zoom out as far as the new
     // size needs, and, while the camera still shows the whole globe, refit the globe to it.
+    const refit = () => {
+      const { zoom, padding } = overviewFit();
+      const floor = Math.max(-2, zoom - 0.6);
+      if (Math.abs(map.getMinZoom() - floor) > 0.01) map.setMinZoom(Math.min(floor, map.getZoom(), zoom));
+      if (atOverview && !map.isMoving()) map.jumpTo({ zoom, padding });
+    };
     const resize = () => {
       if (!map || !ready) return;
       map.resize();
-      const floor = Math.max(-2, overviewZoom() - 0.6);
-      if (Math.abs(map.getMinZoom() - floor) > 0.01) map.setMinZoom(Math.min(floor, map.getZoom()));
-      if (atOverview && !map.isMoving()) map.jumpTo({ zoom: overviewZoom() });
+      refit();
       nudge();
       schedulePins();
       scheduleSpace();
@@ -1788,40 +2615,49 @@ void main() {
       }
     };
 
-    /* The flowing dashes on the newest leg. */
-    const DASHES = [
-      [0, 4, 3],
-      [0.5, 4, 2.5],
-      [1, 4, 2],
-      [1.5, 4, 1.5],
-      [2, 4, 1],
-      [2.5, 4, 0.5],
-      [3, 4, 0],
-      [0, 0.5, 3, 3.5],
-      [0, 1, 3, 3],
-      [0, 1.5, 3, 2.5],
-      [0, 2, 3, 2],
-      [0, 2.5, 3, 1.5],
-      [0, 3, 3, 1],
-      [0, 3.5, 3, 0.5],
-    ];
+    /* The flowing dashes on the newest leg: the arcs move theirs smoothly (dashOffset, in
+       line widths, redrawn every FLOW_STEP_MS while that leg shows); the fallback lines step
+       through dash arrays, the dash half a width further on in each. */
+    const DASHES = Array.from({ length: DASH_PERIOD * 2 }, (_, step) => {
+      const start = (DASH.gap + step / 2) % DASH_PERIOD;
+      const over = start + DASH.dash - DASH_PERIOD;
+      return over > 0 ? [over, start - over, DASH_PERIOD - start] : [0, start, DASH.dash, DASH_PERIOD - start - DASH.dash];
+    });
     let dashStep = -1;
     const flow = (time) => {
       flowFrame = 0;
       if (!map || !ready || destroyed) return;
-      const step = Math.floor(time / 110) % DASHES.length;
-      if (step !== dashStep) {
-        dashStep = step;
-        map.setPaintProperty("route-flow", "line-dasharray", DASHES[step]);
+      if (routeDrawn === "arcs") {
+        const step = Math.floor(time / FLOW_STEP_MS);
+        if (step !== dashStep) {
+          dashStep = step;
+          dashOffset = ((time / 1000) * DASH.speed) % DASH_PERIOD;
+          // Redrawn only while the newest leg shows (the frames that move the map measure it).
+          if (arcs.dashesInView()) map.triggerRepaint();
+        }
+      } else {
+        const step = Math.floor(time / (500 / DASH.speed)) % DASHES.length;
+        if (step !== dashStep) {
+          dashStep = step;
+          map.setPaintProperty("route-flow", "line-dasharray", DASHES[step]);
+        }
       }
       flowFrame = requestAnimationFrame(flow);
     };
     // The dashes flow only while the map is on screen (in its pane or its window) and no
     // close-examine window covers the page, so the map can go idle and stop drawing frames.
+    // Under reduced motion there are none.
     const inFront = () => !document.documentElement.classList.contains("has-journey-examine");
+    let dashesShown = !motionReduced;
     const updateFlow = () => {
-      const run = ready && onScreen() && inFront() && !reducedMotion.matches && !document.hidden;
-      if (map?.getLayer("route-flow")) map.setLayoutProperty("route-flow", "visibility", reducedMotion.matches ? "none" : "visible");
+      const run = ready && onScreen() && inFront() && !motionReduced && !document.hidden;
+      if (routeDrawn === "lines" && map?.getLayer("route-flow"))
+        map.setLayoutProperty("route-flow", "visibility", motionReduced ? "none" : "visible");
+      if (dashesShown === motionReduced) {
+        dashesShown = !motionReduced;
+        dashStep = -1;
+        if (map && ready) nudge();
+      }
       if (run && !flowFrame) flowFrame = requestAnimationFrame(flow);
       if (!run && flowFrame) {
         cancelAnimationFrame(flowFrame);
@@ -1856,7 +2692,11 @@ void main() {
         map = new maplibregl.Map({
           container: canvasHost,
           style: buildStyle(tilesBase, routeData, sun, nightPalette),
-          ...overviewView(),
+          // (Refitted once the clock shows: refit().)
+          center: overviewCenter,
+          zoom: overviewZoom(),
+          bearing: 0,
+          pitch: 0,
           minZoom: Math.max(-2, overviewZoom() - 0.6),
           maxZoom: MAX_ZOOM,
           maxPitch: 0,
@@ -1910,7 +2750,19 @@ void main() {
         if (!ready && !event?.sourceId && /webgl|context/i.test(String(event?.error?.message || ""))) fail(event.error);
       });
       map.on("webglcontextlost", () => figure.classList.add("is-lost"));
-      map.on("webglcontextrestored", () => figure.classList.remove("is-lost"));
+      // On a restored context MapLibre rebuilds the style without its custom layers: the
+      // daylight and the arcs are added again, making their GL objects afresh.
+      map.on("webglcontextrestored", () => {
+        figure.classList.remove("is-lost");
+        const again = () => {
+          if (destroyed || !map) return;
+          for (const layer of [daylight, arcs]) if (map.getLayer(layer.id)) map.removeLayer(layer.id);
+          addOverlays();
+          nudge();
+        };
+        if (map.isStyleLoaded()) again();
+        else map.once("style.load", again);
+      });
       map.on("sourcedata", (event) => {
         if (baseShown || event.sourceId !== "omt" || event.dataType !== "source" || !event.tile) return;
         baseShown = true;
@@ -1921,6 +2773,7 @@ void main() {
         if (event?.originalEvent) atOverview = false;
       });
       map.on("move", () => {
+        placeArcs();
         schedulePins();
         scheduleSpace();
         // Flying from a night city to a day one, the street map turns light on the way down.
@@ -1937,11 +2790,7 @@ void main() {
       });
       map.on("load", () => {
         if (destroyed) return;
-        try {
-          map.addLayer(daylight, map.getLayer("border-state") ? "border-state" : undefined);
-        } catch (error) {
-          console.warn("Journey map daylight layer unavailable", error);
-        }
+        addOverlays();
         ready = true;
         figure.classList.remove("is-loading");
         loadingEl?.remove();
@@ -1959,6 +2808,8 @@ void main() {
         schedulePins();
         updateFlow();
         if (clockEl) clockEl.hidden = false;
+        // With the clock in place, the whole globe is fitted under it.
+        refit();
         // The library took a moment to arrive: start from the time it is now.
         shownTime = clock();
         updateSun();
@@ -2008,7 +2859,10 @@ void main() {
     listen(document, "visibilitychange", () => {
       if (!document.hidden && ready) catchUp();
     });
-    const onMotion = () => updateFlow();
+    const onMotion = (event) => {
+      motionReduced = Boolean(event?.matches);
+      updateFlow();
+    };
     reducedMotion.addEventListener?.("change", onMotion);
     if (typeof MutationObserver === "function") {
       const frontObserver = new MutationObserver(() => updateFlow());
@@ -2066,6 +2920,37 @@ void main() {
       getTime: () => shownTime,
       getSun: () => ({ ...sun }),
       getMode: () => mode,
+      // The route (for tests): drawn as "arcs" or "lines", whether its dashes show, flow
+      // (and their offset) and were in sight in the last frame (so get redrawn), and per leg
+      // its length and full peak height in km, the share of that height it flies at now
+      // (lift), where its midpoint is drawn in the air (peak, with its height now in km) and
+      // where the ground under it is (ground; [lon, lat] in middle), in CSS px of the canvas,
+      // each with whether it is in sight.
+      getRoute() {
+        const live = Boolean(map && ready);
+        const lifts = arcs.lifts();
+        return {
+          drawn: routeDrawn,
+          dashesShown,
+          flowing: Boolean(flowFrame),
+          dashesInView: routeDrawn === "arcs" ? arcs.dashesInView() : dashesShown,
+          dashOffset,
+          legs: flights.map((leg, i) => {
+            const ground = live ? map.project(leg.middle) : null;
+            return {
+              from: leg.from,
+              to: leg.to,
+              age: leg.age,
+              middle: leg.middle,
+              km: Math.round((leg.omega * EARTH_RADIUS) / 1000),
+              peakKm: Math.round((leg.peak * EARTH_RADIUS) / 1000),
+              lift: lifts[i],
+              peak: live && routeDrawn === "arcs" ? arcs.locate(i, 0.5) : null,
+              ground: ground ? { x: ground.x, y: ground.y, visible: !occluded(leg.middle) } : null,
+            };
+          }),
+        };
+      },
       get map() {
         return map;
       },

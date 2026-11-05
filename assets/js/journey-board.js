@@ -748,7 +748,17 @@
       [0, 0.38, 1, 0.38],
       [1, 0.45, 0.82, 0.5],
       [0, 0.55, 0.82, 0.5],
+      // More room for a paper (or a closed pile) that carries several objects: hanging
+      // below the bottom edge, and along the lower sides.
+      [0.5, 0.5, 1, 0.16],
+      [0.82, 0.5, 1, 0.22],
+      [0.18, 0.5, 1, 0.22],
+      [1, 0.5, 0.68, 0.5],
+      [0, 0.5, 0.68, 0.5],
     ];
+    // Covering another object costs about as much as covering a title, so several objects
+    // on one paper (OLIVE's headset and EEG strip) or on one closed pile lie side by side.
+    const OBJECT_WEIGHT = 900;
     const placeAttached = (entry, box, zones, bounds) => {
       const own = titleZone(entry.doc, entry.holder.parentElement, box);
       const local = own ? [...zones, { zone: own, weight: 1000 }] : zones.slice();
@@ -786,7 +796,7 @@
         }
         node.style.width = `${round(best.w)}px`;
         placed.push(best.here);
-        local.push({ zone: best.here, weight: 80 });
+        local.push({ zone: best.here, weight: OBJECT_WEIGHT });
         node.style.left = `${round(best.x)}px`;
         node.style.top = `${round(best.y)}px`;
         node.style.setProperty("--attach-tilt", `${round(artifact.tilt)}deg`);
@@ -824,7 +834,7 @@
         }
         if (caseBox) zones.push({ zone: caseBox, weight: 400 });
         const box = { x: item.box.x, y: item.box.y, w: item.box.w, h: item.box.h };
-        for (const zone of placeAttached(entry, box, zones, bounds)) placed.push({ zone, weight: 80 });
+        for (const zone of placeAttached(entry, box, zones, bounds)) placed.push({ zone, weight: OBJECT_WEIGHT });
       }
     };
 
@@ -1244,7 +1254,7 @@
         if (!box) continue;
         const mine = zones.filter((zone) => zone.card !== entry.doc);
         for (const zone of placeAttached(entry, { x: box.x, y: box.y, w: box.w, h: entry.doc.offsetHeight }, mine, bounds))
-          zones.push({ zone, weight: 30 });
+          zones.push({ zone, weight: OBJECT_WEIGHT });
       }
       drawFan();
     };

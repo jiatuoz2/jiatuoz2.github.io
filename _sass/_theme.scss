@@ -306,6 +306,9 @@ $night-gold: #d6bc72;
     .banner-monogram {
       color: $night-muted;
     }
+    .profile-banner .banner-links i.fa-github {
+      color: #fff;
+    }
     .banner-links a:focus-visible {
       outline-color: $night-focus;
     }

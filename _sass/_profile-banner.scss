@@ -236,6 +236,42 @@
   color: #566d7e;
   font-size: 0.95em;
 }
+// Each service's own brand colour (the icon's colour is what the cloth print draws it in).
+// The envelope has no brand, so it keeps the ink colour. Night keeps these too, except
+// GitHub's black mark, which GitHub gives in white on dark backgrounds (_theme.scss).
+.profile-banner .banner-links i.fa-graduation-cap {
+  color: #4285f4; // Google Scholar
+}
+.profile-banner .banner-links i.fa-github {
+  color: #181717;
+}
+.profile-banner .banner-links i.fa-linkedin {
+  color: #0a66c2;
+}
+.profile-banner .banner-links i.fa-file-pdf {
+  color: #ec1c24; // Adobe Acrobat's PDF red
+}
+// Font Awesome 5.5 has no ORCID glyph: the iD mark, white on ORCID green, drawn the same way
+// on the cloth print (profile-banner.js).
+.profile-banner .banner-links i.banner-icon-orcid {
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #a6ce39;
+  color: #a6ce39;
+  font-style: normal;
+}
+.banner-icon-orcid::before {
+  content: "iD";
+  color: #fff;
+  font:
+    700 7.5px Arial,
+    sans-serif;
+  letter-spacing: -0.2px;
+}
 .banner-link-arrow {
   margin-left: auto;
   color: #798793;

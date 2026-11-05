@@ -507,6 +507,158 @@ test("the globe is lit by the sun at the real time and never turns by itself", a
   expect(errors).toEqual([]);
 });
 
+test("the route flies in arcs that rise off the globe, higher for longer legs, the newest leg's dashes flowing", async ({ page }) => {
+  const errors = watchErrors(page);
+  await openJourney(page, "/?journey-time=2026-06-21T17:00:00Z");
+  test.skip(!(await hasWebGL(page)), "this browser build has no WebGL, so there is no route to draw");
+  await mapReady(page);
+  const figure = mapFigure(page);
+  const route = await figure.evaluate((element) => element.journeyMap.getRoute());
+  // The arcs have their own layer; the lines on the ground are only its fallback, hidden, so
+  // nothing is drawn twice.
+  expect(route.drawn).toBe("arcs");
+  const ground = ["route-glow", "route-case", "route", "route-flow"];
+  const shown = await figure.evaluate((element, ids) => ids.map((id) => element.journeyMap.map.getLayoutProperty(id, "visibility")), ground);
+  expect(shown).toEqual(ground.map(() => "none"));
+  // One arc a leg, in order, the newest (age 0) into Evanston.
+  expect(route.legs.map((leg) => `${leg.from} ${leg.to} ${leg.age}`)).toEqual(
+    STOPS.slice(1).map((id, i) => `${STOPS[i]} ${id} ${STOPS.length - 2 - i}`)
+  );
+  // Higher for longer flights, never more than a fifth of the Earth's radius; a short hop
+  // still gets a hump.
+  const byLength = [...route.legs].sort((a, b) => a.km - b.km);
+  for (let i = 1; i < byLength.length; i++) expect(byLength[i].peakKm).toBeGreaterThan(byLength[i - 1].peakKm);
+  for (const leg of route.legs) {
+    expect(leg.peakKm).toBeGreaterThan(100);
+    expect(leg.peakKm).toBeLessThan(0.2 * 6371);
+  }
+  // On the whole globe each long leg's midpoint is in sight, lifted well off the ground under
+  // it: farther out from the globe's centre (the centre of the view, lower than the middle
+  // of the canvas where the globe moves down to clear the clock). Each arc also leans to one
+  // side, so it is never seen edge-on from here: its midpoint moves sideways too.
+  const canvas = figure.locator("[data-map-canvas]");
+  const box = await canvas.boundingBox();
+  const centre = await figure.evaluate((element) => element.journeyMap.map.project(element.journeyMap.map.getCenter()));
+  const fromCentre = ({ x, y }) => Math.hypot(x - centre.x, y - centre.y);
+  const sideways = ({ x, y }, ground) => {
+    const [rx, ry] = [ground.x - centre.x, ground.y - centre.y];
+    return Math.abs((x - ground.x) * ry - (y - ground.y) * rx) / Math.hypot(rx, ry);
+  };
+  const long = route.legs.filter((leg) => leg.km > 5000);
+  expect(long).toHaveLength(3);
+  for (const leg of long) {
+    expect(leg.peak.visible, `${leg.from} to ${leg.to}`).toBe(true);
+    expect(fromCentre(leg.peak) - fromCentre(leg.ground), `${leg.from} to ${leg.to}`).toBeGreaterThan(8);
+    expect(sideways(leg.peak, leg.ground), `${leg.from} to ${leg.to}`).toBeGreaterThan(5);
+  }
+  // The whole-globe view leaves room for the arcs, at full height: every midpoint in the
+  // frame and below the clock.
+  const clock = await figure.locator("[data-map-clock]").boundingBox();
+  for (const leg of route.legs) {
+    expect(leg.lift, `${leg.from} to ${leg.to}`).toBe(1);
+    expect(box.y + leg.peak.y, `${leg.from} to ${leg.to}`).toBeGreaterThan(clock.y + clock.height);
+    expect(leg.peak.y, `${leg.from} to ${leg.to}`).toBeLessThan(box.height);
+  }
+  // And drawn there: hiding the arcs changes the picture at each long leg's peak (least at the
+  // oldest, the dimmest), and much less on the ground under the latest one (no other leg
+  // passes there).
+  const overlays = ".journey-map-frame > :not([data-map-canvas]) { visibility: hidden !important; }";
+  const withArcs = await canvas.screenshot({ animations: "disabled", style: overlays });
+  await figure.evaluate(
+    (element) =>
+      new Promise((resolve) => {
+        const map = element.journeyMap.map;
+        map.setLayoutProperty("route-arcs", "visibility", "none");
+        map.once("render", () => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        map.triggerRepaint();
+      })
+  );
+  const withoutArcs = await canvas.screenshot({ animations: "disabled", style: overlays });
+  const latest = long.find((leg) => leg.to === "new-york");
+  const changes = await page.evaluate(
+    async ([before, after, points, width]) => {
+      const pixels = async (base64) => {
+        const image = new Image();
+        image.src = `data:image/png;base64,${base64}`;
+        await image.decode();
+        const canvas = document.createElement("canvas");
+        canvas.width = image.naturalWidth;
+        canvas.height = image.naturalHeight;
+        canvas.getContext("2d").drawImage(image, 0, 0);
+        return canvas.getContext("2d");
+      };
+      const [a, b] = [await pixels(before), await pixels(after)];
+      const scale = a.canvas.width / width;
+      // The largest change of color within 2 CSS px of each point.
+      return points.map(({ x, y }) => {
+        const r = Math.ceil(2 * scale);
+        const area = [Math.round(x * scale) - r, Math.round(y * scale) - r, 2 * r + 1, 2 * r + 1];
+        const [p, q] = [a.getImageData(...area).data, b.getImageData(...area).data];
+        let most = 0;
+        for (let i = 0; i < p.length; i += 4)
+          most = Math.max(most, Math.abs(p[i] - q[i]) + Math.abs(p[i + 1] - q[i + 1]) + Math.abs(p[i + 2] - q[i + 2]));
+        return most;
+      });
+    },
+    [withArcs.toString("base64"), withoutArcs.toString("base64"), [...long.map((leg) => leg.peak), latest.ground], box.width]
+  );
+  for (const [i, leg] of long.entries()) expect(changes[i], `${leg.from} to ${leg.to} (changes ${changes})`).toBeGreaterThan(100);
+  expect(changes[long.length], `changes ${changes}`).toBeLessThan(70);
+  await figure.evaluate((element) => element.journeyMap.map.setLayoutProperty("route-arcs", "visibility", "visible"));
+  // The newest leg's dashes flow while the map is on screen.
+  expect(route.dashesShown).toBe(true);
+  await expect.poll(() => figure.evaluate((element) => element.journeyMap.getRoute().flowing)).toBe(true);
+  await expect.poll(() => figure.evaluate((element) => element.journeyMap.getRoute().dashOffset)).not.toBe(route.dashOffset);
+  // Closer in, each arc comes down (and leans less) to stay in view over the ground it flies
+  // over: the oldest leg over the Arctic, the newest between New York and Evanston. The
+  // dashes redraw the map only while the newest leg is in sight.
+  const over = (leg, zoom) =>
+    figure.evaluate(
+      async (element, [center, zoom]) => {
+        element.journeyMap.map.jumpTo({ center, zoom, padding: { top: 0, bottom: 0, left: 0, right: 0 } });
+        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        return element.journeyMap.getRoute();
+      },
+      [leg.middle, zoom]
+    );
+  const renders = () =>
+    figure.evaluate(
+      (element) =>
+        new Promise((resolve) => {
+          const map = element.journeyMap.map;
+          let count = 0;
+          const tick = () => (count += 1);
+          map.on("render", tick);
+          setTimeout(() => {
+            map.off("render", tick);
+            resolve(count);
+          }, 1000);
+        })
+    );
+  const inFrame = ({ x, y, visible }) => visible && x > 0 && y > 0 && x < box.width && y < box.height;
+  for (const [index, zoom] of [
+    [0, 4.5],
+    [route.legs.length - 1, 9],
+  ]) {
+    const leg = (await over(route.legs[index], zoom)).legs[index];
+    expect(leg.lift, `${leg.from} to ${leg.to} at zoom ${zoom}`).toBeLessThan(1);
+    expect(inFrame(leg.peak), `${leg.from} to ${leg.to} at zoom ${zoom}: ${JSON.stringify(leg.peak)}`).toBe(true);
+    // Over the imagery the arcs fly over the labels; on the street map they pass under them.
+    const order = await figure.evaluate((element) => element.journeyMap.map.getLayersOrder());
+    if (zoom < 8) expect(order.at(-1)).toBe("route-arcs");
+    else expect(order.indexOf("route-arcs")).toBe(order.indexOf("label-road") - 1);
+    const newest = index === route.legs.length - 1;
+    await expect.poll(() => figure.evaluate((element) => element.journeyMap.getRoute().dashesInView)).toBe(newest);
+    if (newest) await expect.poll(renders, { timeout: 15000 }).toBeGreaterThan(4);
+    else await expect.poll(renders, { timeout: 15000 }).toBeLessThan(3);
+  }
+  // Reduced motion turned on with the page open stops the dashes, and the map with them.
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect.poll(() => figure.evaluate((element) => element.journeyMap.getRoute())).toMatchObject({ dashesShown: false, flowing: false });
+  await expect.poll(renders, { timeout: 15000 }).toBeLessThan(3);
+  expect(errors).toEqual([]);
+});
+
 test("Ctrl + scroll over the map never zooms the page, even while the map is loading", async ({ page }, testInfo) => {
   const errors = watchErrors(page);
   // Hold the map library back so the figure shows its loading state for as long as needed.
@@ -1178,6 +1330,12 @@ test("reduced motion keeps the boards, pile and map still", async ({ page }) => 
     await mapReady(page);
     await tab(page, "champaign").click();
     expect(await mapFigure(page).evaluate((element) => element.journeyMap.isAnimating())).toBe(false);
+    // The route still flies in arcs, but no dashes show or flow along its newest leg.
+    const route = () => mapFigure(page).evaluate((element) => element.journeyMap.getRoute());
+    const still = await route();
+    expect(still).toMatchObject({ drawn: "arcs", dashesShown: false, flowing: false });
+    await page.waitForTimeout(500);
+    expect((await route()).dashOffset).toBe(still.dashOffset);
   }
   expect(errors).toEqual([]);
 });
@@ -1454,6 +1612,81 @@ test("objects lie on their papers as clean cutouts, and the real documents show 
   expect(scans.cover, "the Westminster diploma cover").toBe(1);
   await expect(page.locator("#board-westminster")).toHaveAttribute("data-scan", "cover");
   await expect(page.locator("#board-westminster-cords")).toHaveAttribute("data-attach", "westminster");
+  expect(errors).toEqual([]);
+});
+
+// The New York XR hardware: the Quest 3 on Delegate the Details, and OLIVE's Varjo XR-3 and
+// B-Alert strip both on OLIVE (with Cascade's eye tracker, all on the papers pile). Each
+// lies over the lower part of its paper (the pile, while it is closed), in sight, and no
+// object covers another, piled or spread.
+test("the New York XR artifacts lie attached to their papers, clear of each other, piled and spread", async ({ page }) => {
+  const errors = watchErrors(page);
+  await openJourney(page);
+  await tab(page, "new-york").click();
+  await expectSelected(page, "new-york");
+  await showCork(page, "new-york");
+  const ny = board(page, "new-york");
+  const owners = { "nyc-quest-3": "delegate", "olive-varjo-xr3": "olive", "olive-balert-strip": "olive", "cascade-eye-tracker": "cascade" };
+  for (const [id, owner] of Object.entries(owners)) {
+    const object = page.locator(`#board-${id}`);
+    await expect(object).toHaveAttribute("data-attach", owner);
+    await expect(object).toHaveAttribute("data-medium", "cutout");
+    const image = object.locator(".board-artifact-object img");
+    await expect(image).toHaveAttribute("src", new RegExp(`/artifacts/${id === "cascade-eye-tracker" ? "eye-tracker" : id}\\.png$`));
+    await image.evaluate((element) => {
+      element.loading = "eager";
+    });
+    await expect.poll(() => image.evaluate((element) => element.complete && element.naturalWidth), { timeout: 20000 }).toBeGreaterThan(0);
+  }
+  await expect(page.locator("#board-olive-varjo-xr3")).toContainText("(c) Varjo");
+  const overlap = (a, b) =>
+    Math.max(0, Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x)) *
+    Math.max(0, Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y));
+  const problems = async (state) => {
+    const found = await ny.evaluate((section, owners) => {
+      return Object.entries(owners).map(([id, owner]) => {
+        const node = section.querySelector(`#board-${id}`);
+        const host = node.closest(".board-doc-attached").parentElement;
+        const piled = host.matches(".board-stack");
+        const box = node.getBoundingClientRect();
+        const top = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+        return {
+          id,
+          on: piled ? "pile" : host.dataset.doc,
+          owner,
+          piled,
+          box: box.toJSON(),
+          paper: host.getBoundingClientRect().toJSON(),
+          seen: Boolean(top && node.contains(top)),
+        };
+      });
+    }, owners);
+    const out = [];
+    for (const object of found) {
+      if (object.on !== (state === "piled" ? "pile" : object.owner)) out.push(`${object.id} lies on ${object.on}`);
+      if (!overlap(object.box, object.paper)) out.push(`${object.id} is off its paper`);
+      if (object.box.y + object.box.height / 2 < object.paper.y + object.paper.height * 0.45) out.push(`${object.id} is over its paper's upper part`);
+      if (!object.seen) out.push(`${object.id} is out of sight`);
+    }
+    // (Bounding boxes of tilted objects: a sliver of overlap at their corners is allowed.)
+    for (let i = 0; i < found.length; i++) {
+      for (let j = i + 1; j < found.length; j++) {
+        const [a, b] = [found[i], found[j]];
+        const share = overlap(a.box, b.box) / Math.min(a.box.width * a.box.height, b.box.width * b.box.height);
+        if (share > 0.08) out.push(`${a.id} covers ${b.id} (${Math.round(share * 100)}%)`);
+      }
+    }
+    return out;
+  };
+  await expect.poll(() => problems("piled")).toEqual([]);
+  const button = page.locator("#board-stack-ny-papers .board-stack-open");
+  await button.click();
+  await expect(button).toHaveAttribute("aria-expanded", "true");
+  await page.mouse.move(1, 1);
+  await expect.poll(() => problems("spread"), { timeout: 15000 }).toEqual([]);
+  await page.keyboard.press("Escape");
+  await expect(button).toHaveAttribute("aria-expanded", "false");
+  await expect.poll(() => problems("piled"), { timeout: 15000 }).toEqual([]);
   expect(errors).toEqual([]);
 });
 
@@ -1868,7 +2101,7 @@ test("the hint under an object without a model says it zooms and moves, not turn
   await takeModel(page, "westminster-cords");
   await page.locator("#board-westminster-cords > .board-doc-open").evaluate((element) => element.click());
   const dialog = page.locator("dialog.journey-examine");
-  await expect(dialog.locator(".examine-hint")).toHaveText("Scroll to zoom · drag to move · double-click to reset");
+  await expect(dialog.locator(".examine-hint")).toHaveText("Scroll to zoom");
   await page.keyboard.press("Escape");
 });
 
@@ -1918,7 +2151,7 @@ test("an object with a 3D model opens on its photo, and loads nothing 3D until S
   await expect(dialog.locator(".examine-object")).toHaveClass(/\bis-rigid\b/);
   await expect(dialog.locator(".examine-object")).not.toHaveAttribute("aria-label", /3D model/);
   if (!testInfo.project.name.includes("mobile")) {
-    await expect(dialog.locator(".examine-hint")).toHaveText("Scroll to zoom · drag to move · double-click to reset");
+    await expect(dialog.locator(".examine-hint")).toHaveText("Scroll to zoom");
   }
   // The button sits with the zoom buttons, over the view's foot, and shows a cube.
   const [toggleBox, zoomBox, stageBox] = await Promise.all([
@@ -2429,7 +2662,7 @@ test("without WebGL an object with a model keeps its photo, says the 3D model is
   await expect(dialog.locator(".examine-view")).not.toHaveAttribute("data-model", /./);
   await expect(modelNote(page)).toBeHidden();
   if (!testInfo.project.name.includes("mobile")) {
-    await expect(dialog.locator(".examine-hint")).toHaveText("Scroll to zoom · drag to move · double-click to reset");
+    await expect(dialog.locator(".examine-hint")).toHaveText("Scroll to zoom");
   }
   await page.waitForTimeout(500);
   expect(loads).toEqual([]);
@@ -2467,7 +2700,7 @@ test("a model that fails to load, or loses its WebGL context, leaves the photo a
     await expect(modelNote(page)).toBeHidden();
     await expect(stage).not.toHaveAttribute("aria-describedby", /./);
     if (!testInfo.project.name.includes("mobile")) {
-      await expect(dialog.locator(".examine-hint")).toHaveText("Scroll to zoom · drag to move · double-click to reset");
+      await expect(dialog.locator(".examine-hint")).toHaveText("Scroll to zoom");
     }
   };
   await page.locator("#board-westminster-cords > .board-doc-open").evaluate((element) => element.click());

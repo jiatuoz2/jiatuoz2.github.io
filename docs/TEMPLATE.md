@@ -259,10 +259,13 @@ Files:
   sensor it read). medium: cutout is the only kind to use: a PNG in
   assets/img/journey/artifacts/ with a transparent background and a clean edge. Never
   use a drawing, a plain photo, or a different model; leave the object out instead.
-  Name a model only when the CV or Jiatuo names it. attach: <doc id> lays the object on
+  Name a model only when the CV, a paper, or Jiatuo names it. attach: <doc id> lays the object on
   that document, over its bottom edge or a lower corner, under only its own contact and
   drop shadows (no tape, pin, tag, or string); it moves with the document and does not
-  count as a board item. medium photo and the legacy bag are deprecated.
+  count as a board item. Several objects may lie on one document (OLIVE's Varjo XR-3 and
+  B-Alert strip), and a closed pile carries all its papers' objects: covering another
+  object costs about as much as covering a title, so they lie side by side, not stacked.
+  medium photo and the legacy bag are deprecated.
 - An artifact's 3D model (optional; the board always keeps the cutout): model, the site
   path of a glTF binary (assets/models/journey/<doc id>.glb); model_size_m, the object's
   real longest side in metres (required with a model: it sets the scale, so the contact
@@ -421,8 +424,33 @@ again with one console.warn and the timeline carries on.
 - Pins are buttons named "Place, period" (", now" for the current stop). Pins within
   26 px merge into a numbered cluster; pressing it zooms in until they split. A pin flies
   to the place, selects its tab and board without moving focus (no pane changes size),
-  and announces "Showing ..." in the polite status line. The route is a great circle
-  through the stops, older legs dimmer. Flights become jumps under reduced motion.
+  and announces "Showing ..." in the polite status line. Flights become jumps under
+  reduced motion.
+- Route: each leg is an airline-style flight arc drawn by a second custom WebGL layer
+  (createRouteLayer in journey-map.js): the great circle on the ground, rising off it at
+  one stop and landing at the next, peak·sin(πt) high, where the peak is 0.11·θ^0.6 Earth
+  radii for a leg θ radians long (about 1,000 km over the Pacific, 250 km from New York to
+  Evanston). Each arc leans to one side by 0.75 of its height (ARC_LEAN, about 37°), so
+  from straight above it bows like a flight path on a flat map and is not seen edge-on
+  from the whole-globe view: away from the current stop, which that view looks down on,
+  or, for a leg whose great circle passes within 3° of it, to the right of its way.
+  Zoomed in, arcs come down to stay under the camera and on screen: a peak at most 0.15
+  of the camera's height (ARC_ROOM) and a lean at most 0.05 of it (ARC_SWAY), so close in
+  a leg runs along its track. It keeps the old line style (glow, dark casing, core; older
+  legs dimmer, less so on the street map, the newest on top with slow flowing dashes, none
+  under reduced motion; on the night street map coral, not the roads' amber), fades where
+  the globe hides it, and stays in sight where it rises above the limb. Over the imagery
+  the arcs are drawn over the labels; from the street map's zoom, under them (route-arcs
+  before label-road). The whole-globe view fits the highest arc in the frame; where it
+  would pass under the clock (wide frames: a phone, the map window) the globe moves down
+  below the clock (camera padding) and shrinks to fit. The dashes redraw the map (every
+  80 ms) only while at least one dash period of the newest leg is on screen clear of its
+  pins. The ground lines (route-glow, route-case, route, route-flow) stay hidden as its
+  fallback, shown only if the arc layer cannot run; the shader's dash pattern and the
+  fallback's dash arrays are both built from DASH. getRoute() reports how the route is
+  drawn, its dashes (shown, flowing, in view), and each leg's length, full peak height,
+  share of it flown now (lift), and midpoint on screen in the air and on the ground (for
+  tests).
 - Tile sources and attribution (MapLibre's compact (i) control): NASA GIBS (public
   domain, citation requested), OpenFreeMap / OpenMapTiles / OpenStreetMap (ODbL,
   attribution required), and Mapzen, USGS, NOAA for terrain (all listed at all times). EOX Sentinel-2 cloudless is not used (non-commercial licence). To
@@ -497,8 +525,8 @@ tilted toward the light. Drag turns a paper (up to about 25° each way; document
 cards, prints, notes, folders and the Westminster cover), the light, folds, shadow and edge
 following the turn; an object (kind artifact: a robot, the cords, every cutout and
 photographed object) without a 3D model lies flat under one soft, still shadow and a drag
-only moves it when zoomed in (hint: "Scroll to zoom · drag to move · double-click to
-reset"). The wheel, a pinch, or the buttons zoom it (1x to 2.5x), and a double-click or
+only moves it when zoomed in (hint: "Scroll to zoom" at rest, "Drag to move it ·
+double-click to reset" once zoomed in, so it never offers a drag that does nothing). The wheel, a pinch, or the buttons zoom it (1x to 2.5x), and a double-click or
 Reset puts it back. An object with a 3D model (model in journey.yml) opens exactly like
 one without: its photo cutout, rigid zoom and pan, the same hint, kicker "Object", and
 nothing of three.js or the model is requested (not with the page, not with the window).
@@ -702,7 +730,9 @@ Adapted CC BY-SA images stay CC BY-SA and say how they were changed. The only ex
 are pictures Jiatuo asked for or supplied, each marked in its own section of CREDITS.md
 as not openly licensed: the FRC Team 744 robot photo (from the team's site), the Linktop
 product image (supplied by Jiatuo), the salutatorian cords (two retailer product photos,
-at Jiatuo's request), and
+at Jiatuo's request), the Meta Quest 3 (Meta's product render), the B-Alert X24 strip
+(BIOPAC's product photo), the Varjo XR-3 (Varjo's press image, credited "(c) Varjo" as
+its press terms ask), and
 the people's portraits (from their own official profile pages). The scans in
 assets/img/journey/docs/ are Jiatuo's own diplomas and papers. Board textures
 are generated for this site (bin/build_journey_textures.py and the slate) and sound effects
@@ -752,7 +782,13 @@ AWS terrain) with page.route, so it runs offline and deterministically, and cove
 the six-stop timeline strip in order with Evanston current, tab ARIA and keys, and
 #journey-<id> links; the map loading only near the section, its first view facing
 Evanston, named pin buttons, clusters zooming in, a pin selecting its tab and board, tab
-fly-to, zoom and reset; the daylight at a pinned time
+fly-to, zoom and reset; the route's flight arcs (one per leg in order, higher for longer
+legs, each long leg's midpoint drawn off the ground under it and to one side, every
+midpoint in the frame below the clock, the ground lines hidden, the newest leg's dashes
+flowing, the arcs lowered and on screen over the middle of the oldest leg at zoom 4.5
+and of the newest at zoom 9, over the labels there and under them on the street map, the
+map redrawn only while the newest leg shows, and no dashes under reduced motion, also
+when it is turned on with the page open); the daylight at a pinned time
 (?journey-time=; day at noon and dark at midnight in Evanston, the sun moving 15° an
 hour, the camera never moving, the live clock advancing, no time-lapse controls); Ctrl +
 scroll over the map while the library is held back (cancelled, page not zoomed, the zoom
@@ -767,7 +803,8 @@ in its pane and focus on the button, and reduced motion); no sources caption und
 panes, and the map's (i) control naming every source; the map hiding without WebGL or when its library fails, and painting
 the bundled imagery when the tile hosts are down; every board the same fixed size with
 its papers inside, photos loaded with alt text and credits; the title sheet with two blue
-tape strips on all six boards; artifacts as transparent cutouts on their documents and
+tape strips on all six boards; artifacts as transparent cutouts on their documents (the
+New York XR hardware on its papers, clear of each other, piled and spread) and
 the diploma, paper-page, and cover scans; threads above the papers (hit-tested along
 every thread at rest, on hover, and after the examine window); the New York papers pile
 (fan-out with no threads, focus, Escape, gather); the examine window (a centred window,

@@ -13,13 +13,14 @@ The owner explicitly requested a complete migration away from al-folio.
 - Preserve publication status, authorship, and existing links. Do not invent CV facts.
 - My Journey content lives only in \_data/journey.yml (stops, docs, stacks, threads,
   artifacts with medium/attach, scans, portraits; its header comment is the schema).
-  Take every fact from the CV, papers.bib, about.md, or what Jiatuo has stated
-  directly; never publish the CV phone number. Pictures from others need a free licence
-  (PD, CC0, CC BY, CC BY-SA, checked on the source page), credit/credit_link, and a row
-  in assets/img/journey/CREDITS.md; the few used at Jiatuo's request are marked there as
-  not openly licensed (the Linktop and cord product images, and Google's Pixel Watch 3
-  model). An item with no suitable picture is left out, and artifacts are
-  transparent PNG cutouts only. See docs/TEMPLATE.md for the split view, map, board,
+  Take every fact from the CV, papers.bib, about.md, the papers in assets/pdf/, or what
+  Jiatuo has stated directly; never publish the CV phone number. Pictures from others
+  need a free licence (PD, CC0, CC BY, CC BY-SA, checked on the source page),
+  credit/credit_link, and a row in assets/img/journey/CREDITS.md; the few used at
+  Jiatuo's request are marked there as not openly licensed (the Linktop, cord, Meta
+  Quest 3 and B-Alert strip product images, the Varjo XR-3 press image credited "(c)
+  Varjo", and Google's Pixel Watch 3 model). An item with no suitable picture is left
+  out, and artifacts are transparent PNG cutouts only. See docs/TEMPLATE.md for the split view, map, board,
   examine window, and sound contracts.
 - An artifact may also have a 3D model (model, model_size_m, optional model_yaw,
   model_pitch, model_pitch_min and model_fov in \_data/journey.yml; assets/models/journey/<doc id>.glb), made from its

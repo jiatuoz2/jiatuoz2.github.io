@@ -115,14 +115,6 @@
       "status": "reject",
       "note": "The only photo is a 640x50 sliver of a thin bar; TRELLIS gave flat slabs with holes; the flat cutout stays."
     },
-    "eit-imu-board": {
-      "sources": ["assets/img/journey/artifacts/imu-board.png"],
-      "size_m": 0.03,
-      "texture_size": 2048,
-      "status": "reject",
-      "seed": 1,
-      "note": "Seeds 1-12 tried. Every one gives the board extra mounting holes (five or six, ragged, where the real one has four), the silkscreen garbled (\"LSM9DS1 Breakout\" unreadable, the flame logo moved) and the parts in other places, so the model turned to the photo did not match its cutout (IoU 0.80 at best) and did not look like the board from any side. The flat cutout stays."
-    },
     "sensorclaw-pixel-watch": {
       "sources": ["assets/img/journey/artifacts/sensorclaw-pixel-watch.png"],
       "size_m": 0.215,

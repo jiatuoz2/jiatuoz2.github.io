@@ -506,9 +506,10 @@
         view.viewer.setZoom(pose.zoom);
         hint.textContent = touchOnly.matches ? "Drag to turn it · pinch to zoom" : "Drag to turn it · scroll to zoom · double-click to reset";
       } else if (rigid) {
-        hint.textContent = touchOnly.matches
-          ? "Pinch to zoom · drag to move when zoomed · swipe to browse"
-          : "Scroll to zoom · drag to move · double-click to reset";
+        // An object doesn't turn, and moves only once it's zoomed in, so the hint mentions
+        // dragging only then.
+        hint.textContent =
+          pose.zoom > 1.001 ? "Drag to move it · double-click to reset" : touchOnly.matches ? "Pinch to zoom · swipe to browse" : "Scroll to zoom";
       } else {
         hint.textContent =
           pose.zoom > 1.001

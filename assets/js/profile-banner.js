@@ -149,10 +149,23 @@
       const value = style.content.replace(/^["']|["']$/g, "");
       if (!value || value === "none") continue;
       const boundsIcon = icon.getBoundingClientRect();
+      const centerX = boundsIcon.x - bounds.x + boundsIcon.width / 2;
+      const centerY = boundsIcon.y - bounds.y + boundsIcon.height / 2;
       context.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
       context.fillStyle = getComputedStyle(icon).color;
       context.textAlign = "center";
-      context.fillText(value, boundsIcon.x - bounds.x + boundsIcon.width / 2, boundsIcon.y - bounds.y + boundsIcon.height / 2 + 1);
+      if (icon.classList.contains("banner-icon-orcid")) {
+        // A drawn badge (the iD on a disc), not a font glyph.
+        context.beginPath();
+        context.arc(centerX, centerY, Math.min(boundsIcon.width, boundsIcon.height) / 2, 0, Math.PI * 2);
+        context.fill();
+        context.fillStyle = style.color;
+        if ("letterSpacing" in context) context.letterSpacing = style.letterSpacing === "normal" ? "0px" : style.letterSpacing;
+        context.fillText(value, centerX, centerY + 0.5);
+        if ("letterSpacing" in context) context.letterSpacing = "0px";
+        continue;
+      }
+      context.fillText(value, centerX, centerY + 1);
     }
     context.textAlign = "left";
     if (hoveredLink) {
