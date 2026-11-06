@@ -2,7 +2,9 @@
 # Facts come from assets/pdf/cv.pdf, _bibliography/papers.bib, _pages/about.md, the papers'
 # PDFs in assets/pdf/ (the study hardware: a Meta Quest 3 with two controllers in VR Task
 # Guidance, Bimanual and Delegate the Details; OLIVE's Varjo XR-3, eye tracking at 200 Hz,
-# and B-Alert X24 EEG, 20 electrodes at 256 Hz), and what Jiatuo has stated directly
+# and B-Alert X24 EEG, 20 electrodes at 256 Hz; Cascade's 120 Hz Tobii eye tracking came
+# from its rejected UIST submission, which is deliberately not kept in the repo), and what
+# Jiatuo has stated directly
 # (Hangzhou before 2017; Westminster Academy, Fort Lauderdale, 2017-2021, salutatorian of
 # the class of 2021, FRC Team 744 in the 2019 and 2020 seasons; the 2020 competition was
 # cancelled because of COVID-19; OLIVE's Varjo XR-3 was used with Valve Index controllers,
