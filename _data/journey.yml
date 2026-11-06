@@ -644,7 +644,7 @@ stops:
         kind: person
         stack: ny-cgui-people
         title: Ben Yang
-        meta: First author, Delegate the Details and Cascade
+        meta: First author, Delegate the Details · Cascade project
         portrait: /assets/img/journey/people/ben-yang.jpg
         portrait_pixel: /assets/img/journey/people/ben-yang.pixel.jpg
         portrait_alt: Photo of Ben Yang, smiling, in a dark winter jacket in front of snow-covered trees.
@@ -661,14 +661,13 @@ stops:
         portrait_credit: "Photo: Barbara Tversky | Faculty Profile | Teachers College, Columbia University"
         portrait_credit_link: https://www.tc.columbia.edu/faculty/bt2158/
       - id: cascade
-        kind: paper
-        stack: ny-papers
+        kind: project
+        stack: ny-courses
         title: Cascade
-        meta: Spatial message routing for developers and AI agents
-        stamp: Under review
+        meta: Research project · Columbia CGUI Lab
+        body: A messaging toolkit for scene graphs that routes messages by spatial proximity, direction and region, tested with developers in a controlled study.
         image: /assets/img/publication_preview/cascade_teaser.png
         image_alt: A spatial routing demonstration showing objects and routing regions in a 3D scene.
-        link: "#paper-yang2027cascade"
       - id: cascade-eye-tracker
         kind: artifact
         medium: cutout
@@ -708,7 +707,7 @@ stops:
       - id: ny-liinc-people
         title: LIINC people
       - id: ny-courses
-        title: Courses
+        title: Projects & courses
     threads:
       - [new-york-place, columbia, studied]
       - [columbia, cgui, research]
@@ -728,7 +727,7 @@ stops:
       - [vr-guidance, bimanual, relative 6DoF poses]
       - [bimanual, delegate, assembly constraints]
       - [ben-yang, delegate, first author]
-      - [ben-yang, cascade, first author]
+      - [ben-yang, cascade, project]
       - [tversky, delegate, co-author]
       - [cgui, cascade, project]
       - [dungeon, delegate, also hierarchical placement]

@@ -20,8 +20,8 @@ redesign/academic-portfolio. The migration is on migration/acad-homepage.
 ## Preserved content
 
 - Biography and Fall 2027 PhD application statement.
-- All five bibliography entries, author order, equal-contribution notes, venues,
-  under-review status, abstracts, paper/poster/DOI/video links, and teaser images.
+- The bibliography entries, author order, equal-contribution notes, venues,
+  abstracts, paper/poster/DOI/video links, and teaser images.
 - Profile photo, personal PDFs (including assets/pdf/cv.pdf), and research videos.
 - All three news entries and their original dates.
 - Existing Google Scholar citation data and scheduled updater. The updater now reads
@@ -76,11 +76,12 @@ The owner requested section and text styling based on Ruiqi Chen's homepage.
 Main content uses locally hosted Newsreader, navy headings, subtle section rules,
 and larger publication titles and author lists. News and Publications have small
 section icons matching the reference. The author's name is rendered as semantic
-strong text at weight 800 in navy across all five publications. Navigation and
+strong text at weight 800 in navy across all four publications. Navigation and
 banner contacts retain their sans-serif typography; the banner name uses Newsreader.
 The trailing Research Experience and Education/CV sections and their Experience/CV
 masthead links were removed at the owner's request. The CV remains accessible from
-the profile banner. Cascade says "Submitted to CHI 2027; under review."
+the profile banner. Cascade was rejected, so it is no longer a publication; it stays on the
+New York journey board as a research project.
 The extra equal-contribution/Scholar/archive line above the list was removed;
 OLIVE's own equal-contribution annotation remains with the paper.
 

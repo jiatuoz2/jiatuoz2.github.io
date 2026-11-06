@@ -1236,8 +1236,8 @@ test("the New York papers sit in one pile that fans out without threads and gath
   const pile = page.locator("#board-stack-ny-papers");
   const button = pile.locator(".board-stack-open");
   await expect(button).toHaveAttribute("aria-expanded", "false");
-  await expect(button).toHaveAccessibleName(/^Papers: a pile of 5 /);
-  await expect(pile.locator(".board-stack-tally")).toHaveText(/5 papers/i);
+  await expect(button).toHaveAccessibleName(/^Papers: a pile of 4 /);
+  await expect(pile.locator(".board-stack-tally")).toHaveText(/4 papers/i);
   expect(await pile.locator(".board-stack-docs").evaluate((list) => list.inert)).toBe(true);
   await showCork(page, "new-york");
   await expect.poll(async () => (await stringsOverDocs(page, "new-york")).threads).toBeGreaterThan(0);
@@ -1248,7 +1248,7 @@ test("the New York papers sit in one pile that fans out without threads and gath
   await expect(fan).toBeVisible();
   // (An object lying on a paper travels with it and is not a card of its own.)
   const cards = fan.locator(".board-fan-cards .board-doc:not(.is-attached)");
-  await expect(cards).toHaveCount(5);
+  await expect(cards).toHaveCount(4);
   for (const card of await cards.all()) await expect(card).toBeVisible();
   await expect(cards.first().locator(":scope > .board-doc-open")).toBeFocused();
   await expect(cork).toHaveClass(/\bis-fanned\b/);
@@ -1616,7 +1616,7 @@ test("objects lie on their papers as clean cutouts, and the real documents show 
 });
 
 // The New York XR hardware: the Quest 3 on Delegate the Details, and OLIVE's Varjo XR-3 and
-// B-Alert strip both on OLIVE (with Cascade's eye tracker, all on the papers pile). Each
+// B-Alert strip both on OLIVE, all on the papers pile. Each
 // lies over the lower part of its paper (the pile, while it is closed), in sight, and no
 // object covers another, piled or spread.
 test("the New York XR artifacts lie attached to their papers, clear of each other, piled and spread", async ({ page }) => {
@@ -1626,13 +1626,13 @@ test("the New York XR artifacts lie attached to their papers, clear of each othe
   await expectSelected(page, "new-york");
   await showCork(page, "new-york");
   const ny = board(page, "new-york");
-  const owners = { "nyc-quest-3": "delegate", "olive-varjo-xr3": "olive", "olive-balert-strip": "olive", "cascade-eye-tracker": "cascade" };
+  const owners = { "nyc-quest-3": "delegate", "olive-varjo-xr3": "olive", "olive-balert-strip": "olive" };
   for (const [id, owner] of Object.entries(owners)) {
     const object = page.locator(`#board-${id}`);
     await expect(object).toHaveAttribute("data-attach", owner);
     await expect(object).toHaveAttribute("data-medium", "cutout");
     const image = object.locator(".board-artifact-object img");
-    await expect(image).toHaveAttribute("src", new RegExp(`/artifacts/${id === "cascade-eye-tracker" ? "eye-tracker" : id}\\.png$`));
+    await expect(image).toHaveAttribute("src", new RegExp(`/artifacts/${id}\\.png$`));
     await image.evaluate((element) => {
       element.loading = "eager";
     });
@@ -3127,7 +3127,7 @@ test("without JavaScript every board is readable and the place list links to it"
   // A pile is a labelled list whose papers are all readable.
   const papers = page.locator("#board-stack-ny-papers");
   await expect(papers.locator(".board-stack-title")).toContainText("Papers");
-  await expect(papers.locator(".board-stack-docs > .board-doc")).toHaveCount(5);
+  await expect(papers.locator(".board-stack-docs > .board-doc")).toHaveCount(4);
   for (const doc of await papers.locator(".board-stack-docs > .board-doc").all()) await expect(doc.locator(".board-doc-title").first()).toBeVisible();
   await page.locator('.journey-stops a[href="#journey-new-york"]').click();
   await expect(page).toHaveURL(/#journey-new-york$/);

@@ -8,17 +8,14 @@ test("AcadHomepage presents the profile, news, and all real publications", async
   await expect(page.locator(".sidebar .author__name")).toContainText("Zou");
   await expect(page.locator("#about-me")).toBeVisible();
   await expect(page.locator(".news-list li")).toHaveCount(3);
-  await expect(page.locator(".paper-box")).toHaveCount(5);
+  await expect(page.locator(".paper-box")).toHaveCount(4);
   await expect(page.locator("#experience, #education")).toHaveCount(0);
   await expect(page.getByRole("navigation").getByRole("link", { name: /^(Experience|CV)$/ })).toHaveCount(0);
-  await expect(page.locator("#paper-yang2027cascade .paper-venue")).toContainText("Submitted to CHI 2027; under review.");
-  await expect(page.locator(".paper-author-self")).toHaveCount(5);
+  await expect(page.locator(".paper-author-self")).toHaveCount(4);
   for (const author of await page.locator(".paper-author-self").all()) {
     expect(await author.evaluate((element) => Number(getComputedStyle(element).fontWeight))).toBeGreaterThanOrEqual(800);
   }
   await expect(page.locator(".profile-banner")).toHaveClass(/cloth-rendered/);
-  await expect(page.locator("#paper-yang2027cascade .badge")).toHaveText("Under review");
-  await expect(page.locator("#paper-yang2027cascade .paper-links a")).toHaveCount(0);
   await page.locator("img").evaluateAll(async (images) => {
     images.forEach((image) => {
       image.loading = "eager";
@@ -32,9 +29,9 @@ test("AcadHomepage presents the profile, news, and all real publications", async
 
 test("all publications share one list with animated teasers and preview/video links", async ({ page }) => {
   await page.goto("/publications/");
-  await expect(page.locator(".paper-box:visible")).toHaveCount(5);
+  await expect(page.locator(".paper-box:visible")).toHaveCount(4);
   await expect(page.locator(".publication-tools, .research-filter")).toHaveCount(0);
-  await expect(page.locator(".publication-list > .paper-box")).toHaveCount(5);
+  await expect(page.locator(".publication-list > .paper-box")).toHaveCount(4);
   for (const [key, gif, preview, video] of [
     ["li2026augmenting", "/research/video/olive.gif", "/assets/video/olive_teaser.mp4", "/research/video/olive.mp4"],
     ["yang2026delegate", "/research/video/delegate-the-details.gif", "/assets/video/delegate_teaser.mp4", "/assets/video/delegate_teaser.mp4"],
@@ -55,11 +52,11 @@ test("publication search matches metadata and abstracts and clears back to all p
     await search.fill("oLiVe");
     await expect(page.locator(".paper-box:visible")).toHaveCount(1);
     await expect(page.locator("#paper-li2026augmenting")).toBeVisible();
-    await expect(page.getByRole("status")).toHaveText("1 of 5 publications");
+    await expect(page.getByRole("status")).toHaveText("1 of 4 publications");
     await search.fill("UIST 2026");
     await expect(page.locator(".paper-box:visible")).toHaveCount(1);
     await search.fill("FEINER");
-    await expect(page.locator(".paper-box:visible")).toHaveCount(5);
+    await expect(page.locator(".paper-box:visible")).toHaveCount(4);
     await search.fill("physiological");
     await expect(page.locator(".paper-box:visible")).toHaveCount(1);
     await expect(page.locator("#paper-li2026augmenting details")).not.toHaveAttribute("open");
@@ -69,13 +66,13 @@ test("publication search matches metadata and abstracts and clears back to all p
     await page.getByRole("button", { name: "Clear publication search" }).click();
     await expect(search).toHaveValue("");
     await expect(search).toBeFocused();
-    await expect(page.locator(".paper-box:visible")).toHaveCount(5);
+    await expect(page.locator(".paper-box:visible")).toHaveCount(4);
     await expect(page.getByRole("status")).toBeHidden();
-    await search.fill("Cascade");
+    await search.fill("Delegate the Details");
     await page.keyboard.press("Enter");
     await expect(page.locator(".paper-box:visible")).toHaveCount(1);
     await page.keyboard.press("Escape");
-    await expect(page.locator(".paper-box:visible")).toHaveCount(5);
+    await expect(page.locator(".paper-box:visible")).toHaveCount(4);
   }
 });
 
@@ -170,7 +167,7 @@ test("content, contacts, navigation, and abstracts work without JavaScript", asy
   const context = await browser.newContext({ javaScriptEnabled: false, baseURL, viewport: { width: 390, height: 844 } });
   const page = await context.newPage();
   await page.goto("/");
-  await expect(page.locator(".paper-box")).toHaveCount(5);
+  await expect(page.locator(".paper-box")).toHaveCount(4);
   await expect(page.locator(".publication-tools")).toHaveCount(0);
   await expect(page.getByRole("searchbox", { name: "Search publications", includeHidden: true })).toBeHidden();
   await expect(page.locator('.banner-links a[href^="mailto:"]')).toBeVisible();
