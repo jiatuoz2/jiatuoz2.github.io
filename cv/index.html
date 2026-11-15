@@ -3,18 +3,29 @@
   <head>
     <meta charset="utf-8" />
 
+<title>Curriculum Vitae | Jiatuo &quot;Charlie&quot; Zou (邹家拓)</title>
+<meta name="description" content="Jiatuo &quot;Charlie&quot; Zou (邹家拓): Curriculum vitae." />
+<meta name="author" content="Jiatuo &quot;Charlie&quot; Zou (邹家拓)" />
 
-<title>Curriculum Vitae | Jiatuo &quot;Charlie&quot; Zou</title>
-<meta name="description" content="HCI researcher at Northwestern University&#39;s SPICE Lab, working on XR, wearable computing, multimodal AI, and novel sensing." />
-<link rel="canonical" href="https://jiatuoz2.github.io/cv/" />
+<link rel="canonical" href="https://charliezou.com/cv/" />
+  
 <meta property="og:type" content="website" />
 <meta property="og:locale" content="en_US" />
 <meta property="og:site_name" content="Jiatuo &quot;Charlie&quot; Zou" />
-<meta property="og:title" content="Curriculum Vitae | Jiatuo &quot;Charlie&quot; Zou" />
-<meta property="og:description" content="HCI researcher at Northwestern University&#39;s SPICE Lab, working on XR, wearable computing, multimodal AI, and novel sensing." />
-<meta property="og:url" content="https://jiatuoz2.github.io/cv/" />
-<meta property="og:image" content="https://jiatuoz2.github.io/assets/img/profile.jpg" />
+<meta property="og:title" content="Curriculum Vitae | Jiatuo &quot;Charlie&quot; Zou (邹家拓)" />
+<meta property="og:description" content="Jiatuo &quot;Charlie&quot; Zou (邹家拓): Curriculum vitae." />
+<meta property="og:url" content="https://charliezou.com/cv/" />
+<meta property="og:image" content="https://charliezou.com/assets/img/profile.jpg" />
+<meta property="og:image:width" content="278" />
+<meta property="og:image:height" content="278" />
+<meta property="og:image:alt" content="Portrait of Jiatuo &quot;Charlie&quot; Zou (邹家拓)" />
+
 <meta name="twitter:card" content="summary" />
+<meta name="twitter:title" content="Curriculum Vitae | Jiatuo &quot;Charlie&quot; Zou (邹家拓)" />
+<meta name="twitter:description" content="Jiatuo &quot;Charlie&quot; Zou (邹家拓): Curriculum vitae." />
+<meta name="twitter:image" content="https://charliezou.com/assets/img/profile.jpg" />
+<meta name="twitter:image:alt" content="Portrait of Jiatuo &quot;Charlie&quot; Zou (邹家拓)" />
+
 
 
 <meta name="HandheldFriendly" content="True" />
@@ -32,6 +43,16 @@
     if (theme !== "dark" && theme !== "light") theme = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
     document.documentElement.dataset.theme = theme;
     document.documentElement.classList.add("theme-switching");
+  })();
+  // With motion allowed the cloth prints one name at a time, starting with the first. Until
+  // the cloth is drawn the heading shows the same (see "name-cycle-pending" in
+  // _sass/_profile-banner.scss), so the name does not move when the print takes over.
+  // profile-banner.js removes the class; the timer is the fallback if it never runs.
+  (() => {
+    const root = document.documentElement;
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches || /[?&]name-cycle=static(&|$)/.test(location.search)) return;
+    root.classList.add("name-cycle-pending");
+    addEventListener("load", () => setTimeout(() => root.classList.remove("name-cycle-pending"), 3000));
   })();
 </script>
 
@@ -96,7 +117,14 @@
       
 <div class="sidebar sticky">
   
-<section class="profile-banner" data-profile-banner itemscope itemtype="https://schema.org/Person" aria-label="Profile and contact information">
+<section
+  class="profile-banner"
+  data-profile-banner
+  itemscope
+  itemtype="https://schema.org/Person"
+  itemid="https://charliezou.com/#person"
+  aria-label="Profile and contact information"
+>
   <div
     class="banner-scroll-grip"
     data-scroll-grip
@@ -125,7 +153,12 @@
           <img src="/assets/img/profile.jpg" alt="Jiatuo &quot;Charlie&quot; Zou" width="278" height="278" itemprop="image" />
         </div>
         <div class="banner-identity">
-          <h2 class="author__name" itemprop="name">Jiatuo "Charlie" Zou</h2>
+          <h2 class="author__name" data-name-cycle>
+            <span class="author__name-en" itemprop="name">Jiatuo "Charlie" Zou</span>
+            
+            <span class="author__name-native" lang="zh-Hans" itemprop="alternateName">邹家拓</span>
+            
+          </h2>
           <p class="author__bio">HCI Researcher · SPICE Lab</p>
           <p class="author__affiliation">Northwestern University</p>
           <p class="banner-location"><i class="fas fa-map-marker-alt" aria-hidden="true"></i> Evanston, Illinois</p>
@@ -138,23 +171,23 @@
             >
           </li>
           <li>
-            <a href="https://scholar.google.com/citations?user=0BX8YlUAAAAJ"
+            <a href="https://scholar.google.com/citations?user=0BX8YlUAAAAJ" rel="me" itemprop="sameAs"
               ><i class="fas fa-fw fa-graduation-cap" aria-hidden="true"></i><span>Google Scholar</span
               ><span class="banner-link-arrow" aria-hidden="true">↗</span></a
             >
           </li>
           <li>
-            <a href="https://orcid.org/0009-0006-4120-444X"
+            <a href="https://orcid.org/0009-0006-4120-444X" rel="me" itemprop="sameAs"
               ><i class="banner-icon-orcid" aria-hidden="true"></i><span>ORCID</span><span class="banner-link-arrow" aria-hidden="true">↗</span></a
             >
           </li>
           <li>
-            <a href="https://github.com/jiatuoz2"
+            <a href="https://github.com/jiatuoz2" rel="me" itemprop="sameAs"
               ><i class="fab fa-fw fa-github" aria-hidden="true"></i><span>GitHub</span><span class="banner-link-arrow" aria-hidden="true">↗</span></a
             >
           </li>
           <li>
-            <a href="https://www.linkedin.com/in/charlie-zou-42b644221/"
+            <a href="https://www.linkedin.com/in/charlie-zou-42b644221/" rel="me" itemprop="sameAs"
               ><i class="fab fa-fw fa-linkedin" aria-hidden="true"></i><span>LinkedIn</span
               ><span class="banner-link-arrow" aria-hidden="true">↗</span></a
             >
@@ -211,6 +244,7 @@
 <script defer src="/assets/js/cloth-physics.js"></script>
 <script defer src="/assets/js/cloth-renderer.js"></script>
 <script defer src="/assets/js/scroll-physics.js"></script>
+<script defer src="/assets/js/name-cycle.js"></script>
 <script defer src="/assets/js/profile-banner.js"></script>
  
 

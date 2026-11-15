@@ -1,6 +1,11 @@
 (() => {
   const banner = document.querySelector("[data-profile-banner]");
-  if (!banner || !window.BannerCloth || !window.BannerClothRenderer || !window.ScrollSpool) return;
+  // Set in the page head while the static heading stands in for the first one-name print.
+  const namePrinted = () => document.documentElement.classList.remove("name-cycle-pending");
+  if (!banner || !window.BannerCloth || !window.BannerClothRenderer || !window.ScrollSpool) {
+    namePrinted();
+    return;
+  }
   const cloth = banner.querySelector("[data-banner-cloth]");
   const canvas = banner.querySelector("[data-cloth-canvas]");
   const content = banner.querySelector(".banner-fabric");
@@ -36,14 +41,35 @@
     ready && visible && !document.hidden && !keyboardFocus && !reducedMotion.matches && rollProgress === 0 && rollFrame === null;
   const state = (value) => {
     banner.dataset.bannerState = rollFrame !== null ? "rolling" : rollProgress === 1 ? "rolled" : value;
+    nameCycle?.sync();
   };
   const clamp = (x, min, max) => Math.max(min, Math.min(max, x));
+  // The name alternates between its two scripts on the print itself (name-cycle.js), so it
+  // bends, rolls and is lit with the cloth. It only redraws its own strip of the texture.
+  const nameCycle = window.BannerNameCycle?.attach({
+    heading: content.querySelector("[data-name-cycle]") || content,
+    banner,
+    print,
+    context,
+    canRun: () => canAnimate(),
+    software: () => renderer.software,
+    upload: (band, x, y) => renderer.setTextureBand(band, x, y),
+    // A swaying or rolling cloth is already drawing every frame.
+    present: () => {
+      if (frame === null && rollFrame === null) render();
+    },
+    reprint: () => {
+      reprint();
+      render();
+    },
+  });
 
   function buildPrint() {
     // Capture the site's actual typography/layout into a high-resolution texture.
     // Native anchors remain in the DOM for keyboard, screen readers and clicks.
     const bounds = cloth.getBoundingClientRect();
     const ratio = Math.min(3, Math.max(2, devicePixelRatio));
+    nameCycle?.begin();
     print.width = Math.ceil(bounds.width * ratio);
     print.height = Math.ceil(bounds.height * ratio);
     context.setTransform(ratio, 0, 0, ratio, 0, 0);
@@ -119,7 +145,7 @@
     context.textBaseline = "middle";
     context.textAlign = "left";
     while ((node = walker.nextNode())) {
-      if (!node.textContent.trim()) continue;
+      if (!node.textContent.trim() || nameCycle?.owns(node)) continue;
       const style = getComputedStyle(node.parentElement);
       context.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
       if ("letterSpacing" in context) context.letterSpacing = style.letterSpacing === "normal" ? "0px" : style.letterSpacing;
@@ -180,6 +206,7 @@
       }
     }
     context.restore();
+    nameCycle?.printed(bounds, ratio);
     renderer.setTexture(print);
   }
   function reprint() {
@@ -297,6 +324,9 @@
     const width = cloth.offsetWidth;
     const height = cloth.offsetHeight;
     if (!width || !height) return;
+    // The print measures the heading as the page lays it out, so the stand-in goes first;
+    // nothing is painted between here and the cloth taking over below.
+    namePrinted();
     simulation = new window.BannerCloth(width, height, renderer.software ? 17 : 29);
     if (spool) spool.configure(height);
     else spool = new window.ScrollSpool(height);
@@ -494,6 +524,7 @@
       ready = false;
       stop();
       banner.classList.remove("cloth-rendered");
+      namePrinted();
       state("static");
     });
 })();

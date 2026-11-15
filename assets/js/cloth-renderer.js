@@ -174,6 +174,14 @@
       gl.bindTexture(gl.TEXTURE_2D, this.texture);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, print);
     }
+    // Replaces one rectangle of the print, for changes too small to justify a full upload.
+    // The canvas fallback draws straight from the print, which the caller has already updated.
+    setTextureBand(band, x, y) {
+      if (this.software) return;
+      const gl = this.gl;
+      gl.bindTexture(gl.TEXTURE_2D, this.texture);
+      gl.texSubImage2D(gl.TEXTURE_2D, 0, x, y, gl.RGBA, gl.UNSIGNED_BYTE, band);
+    }
     setRoll(progress, motion = {}) {
       this.progress = progress;
       this.sway = motion.sway || 0;
