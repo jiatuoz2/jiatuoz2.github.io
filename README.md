@@ -1,6 +1,7 @@
 # Jiatuo "Charlie" Zou — Academic Website
 
-Personal academic website at https://jiatuoz2.github.io, using
+Personal academic website at https://charliezou.com (the custom domain that
+https://jiatuoz2.github.io redirects to), using
 [AcadHomepage](https://github.com/RayeRen/acad-homepage.github.io).
 
 The site presents HCI research in XR, wearable computing, multimodal AI, and sensing.

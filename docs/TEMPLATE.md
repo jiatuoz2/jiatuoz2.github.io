@@ -77,7 +77,8 @@ Main content uses locally hosted Newsreader, navy headings, subtle section rules
 and larger publication titles and author lists. News and Publications have small
 section icons matching the reference. The author's name is rendered as semantic
 strong text at weight 800 in navy across all four publications. Navigation and
-banner contacts retain their sans-serif typography; the banner name uses Newsreader.
+banner contacts retain their sans-serif typography; the banner name uses Newsreader,
+and the name in Chinese under it uses the system's own Chinese serif (see The two names).
 The trailing Research Experience and Education/CV sections and their Experience/CV
 masthead links were removed at the owner's request. The CV remains accessible from
 the profile banner. Cascade was rejected, so it is no longer a publication; it stays on the
@@ -156,6 +157,77 @@ an immediate state change.
 Resizing preserves the current scroll state, and printing always shows the profile.
 The native overflow navigation also re-measures its list after font/layout changes,
 avoiding a WebKit overflow caused by restoring links before their widths settle.
+
+## The two names
+
+The owner's name is published in two scripts so people can find the site by either:
+Jiatuo "Charlie" Zou and 邹家拓. The Chinese name is written once, as author.native_name
+in \_config.yml (with native_name_lang, alternate_names for the other forms people search
+for, given_name, family_name, job_title and alumni_of). Templates read it from there;
+test/template_contract.js fails if a template or script repeats the name itself.
+
+Where it appears, always as text in the built HTML and never added by JavaScript:
+
+- \_includes/author-profile.html: the banner heading holds two spans, .author\_\_name-en
+  (itemprop name) and .author\_\_name-native (lang zh-Hans, itemprop alternateName). The
+  Scholar, ORCID, GitHub and LinkedIn links carry rel="me" and itemprop sameAs.
+- \_pages/about.md: the first sentence of About Me gives it in brackets.
+- \_includes/seo.html: every title ends with the name and (邹家拓); the homepage title adds
+  the job title and employer; every description starts with both names; the portrait
+  has its size and alt text; the homepage is og:type profile. The site has no Chinese
+  version, so no tag claims one (no og:locale:alternate, no hreflang).
+- \_includes/person-schema.html (homepage only): JSON-LD WebSite and ProfilePage, whose
+  Person has name, alternateName (the Chinese name and alternate_names), jobTitle,
+  affiliation, alumniOf, image, and sameAs for the four profiles. Every value comes from
+  \_config.yml.
+
+Search set-up in the same files: url in \_config.yml is https://charliezou.com, the custom
+domain GitHub Pages redirects jiatuoz2.github.io to, so canonical links, the sitemap and
+robots.txt name the address that actually answers. robots.txt has layout: none, so it is
+plain text. The 404 page has noindex and is left out of the sitemap. Three empty keys,
+google_site_verification, bing_site_verification and baidu_site_verification, each print
+their meta tag once a token is pasted in. The page language stays English.
+
+On the banner the heading is always two lines tall: the English name, and the Chinese name
+smaller beneath it. That is what shows without JavaScript, with reduced motion, on keyboard
+focus and in print, and it is all a screen reader ever reads. With motion allowed, the
+cloth print shows one name at a time in the middle of that same box and changes every 5.6
+seconds; the page's text, the heading's size and the banner's height never change.
+Until the cloth is drawn, the page heading stands in for that first print: an inline script
+in \_includes/head.html sets name-cycle-pending on the html element (not under reduced
+motion or ?name-cycle=static), and \_sass/\_profile-banner.scss then shows the English
+name alone in the middle of the box, so the name does not move when the cloth takes over.
+profile-banner.js removes the class before its first print; a timer in the head script
+removes it three seconds after load if the cloth never arrives. If either name is too wide
+for one line (a very narrow banner, enlarged text), the cloth prints the wrapped two-name
+heading and does not cycle.
+
+assets/js/name-cycle.js draws it, loaded before profile-banner.js. The change takes 1.7
+seconds (DURATION; HOLD is the 5.6 seconds between changes). The old name blurs and is
+wiped from left to right; as the edge passes, streams of code run down through its ink and
+a little below. The new name follows: streams run down into each of its columns ahead of
+an edge that uncovers it, blurred first and then sharp. The code is set on a fixed grid
+(COLUMN and ROW, with GLYPH_SIZE) of half-width katakana, digits, a few signs and brush
+strokes. As in digital rain the glyphs stand still and each stream's head lights them in
+turn: the head is the name's own ink colour and the fading trail is --banner-name-code (a
+quiet green, with a night value in \_sass/\_theme.scss). GAPS leaves one column in five
+dark and STAGGER starts the others up to 0.2 seconds apart, which is what makes it read as
+falling streams and not as lines of text. ABOVE and BELOW are how far the redrawn strip
+reaches past the heading; glyphs never leave it.
+The effect is drawn into the print texture, not over it, so it bends, is lit and rolls up
+with the cloth, and there is still only one canvas in the banner. profile-banner.js skips
+the heading's text in its own print and calls the module at three points: begin() before
+a print, printed() after it (which keeps a clean copy of the strip of cloth behind the
+name), and sync() whenever the banner's motion state changes. Each frame redraws only that
+strip and uploads it with ClothRenderer.setTextureBand. Frames run only during a change.
+The cycle waits while the tab is hidden, the banner is off screen, rolled or rolling, or
+a keyboard user is in it, and a change in progress then jumps to its end. Reduced motion
+switches to the two-name print at once.
+
+For tests and screenshots, ?name-cycle=en or =native holds one name, =static holds the
+two-name print, and =native@0.5 (or en@…) holds the change to that name at that progress.
+The heading's data-name-cycle attribute reports static, en, native, en-native or
+native-en.
 
 ## PhD callout
 
@@ -777,6 +849,14 @@ desktop and mobile, direct clicks on fabric and the coil, absence of visible but
 markup, reversal during motion, restored contact access, and rolling without WebGL.
 Numerical spindle checks cover acceleration, retained momentum on reversal, material
 radius, soft stops, and resize state.
+test/visual/name-cycle.spec.js checks that both names are text in the served HTML, the
+title, the description and the JSON-LD, that robots.txt is plain text and only the 404
+page is noindex, that both names show without JavaScript and print in black, that reduced
+motion prints both and never cycles, that each ?name-cycle value holds its state, and that
+the cloth really swaps the visible name and back without changing the page text, the
+banner's height or its canvas count, stopping when rolled. test/name_cycle.js (part of
+npm run test:cloth) checks the timeline arithmetic: it starts and ends clean, repeats
+exactly, and keeps visible particles inside the strip that is redrawn.
 test/visual/journey.spec.js checks that the PhD callout leads the page with its email
 and CV links. For My Journey it stubs the three tile hosts (OpenFreeMap, NASA GIBS,
 AWS terrain) with page.route, so it runs offline and deterministically, and covers:

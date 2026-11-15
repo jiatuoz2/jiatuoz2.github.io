@@ -28,7 +28,9 @@ This repository uses RayeRen's AcadHomepage template. See AGENTS.md and docs/TEM
 
 Preserve the white-background/sidebar design and the owner's requested Newsreader
 main-content typography inspired by Ruiqi Chen's site. The light fabric banner uses
-navy print and fine gold edging, with a serif name and sans-serif contacts.
+navy print and fine gold edging, with a serif name and sans-serif contacts. The name is
+in two scripts (author.name and author.native_name in \_config.yml, both static text in
+the banner heading); assets/js/name-cycle.js alternates them on the cloth print only.
 Navigation remains sans-serif. Put site-specific adjustments in \_sass/\_site.scss
 and behavior in assets/js/site.js. Night colors go in \_sass/\_theme.scss, except for
 My Journey and the PhD callout, whose night overrides sit at the bottom of their own
@@ -38,7 +40,8 @@ controls, reduced-motion support, and JavaScript-free navigation/content.
 
 ## Checks and deployment
 
-Run bundle exec jekyll build, npm run lint:template, npm run test:cloth, and
+Run bundle exec jekyll build, npm run lint:template, npm run test:cloth (which includes
+test/name_cycle.js), and
 npm run test:visual for relevant changes. The browser suite covers desktop Chromium and
 mobile WebKit; test/visual/journey.spec.js stubs the map's tile hosts and pins the map's
 clock with ?journey-time=<ISO time>.

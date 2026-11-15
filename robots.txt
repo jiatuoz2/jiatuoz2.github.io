@@ -1,5 +1,7 @@
 ---
 permalink: /robots.txt
+layout: none
+sitemap: false
 ---
 User-agent: *
 Disallow:

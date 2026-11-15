@@ -8,6 +8,15 @@ The owner explicitly requested a complete migration away from al-folio.
 - Runtime layout/style files are now site-owned; there are no al-folio plugins.
 - Preserve the straightforward sidebar layout. Main content uses the owner's
   requested Newsreader typography; the banner and navigation remain sans-serif.
+- The name is published in two scripts. The Chinese name lives once in \_config.yml
+  (author.native_name) and must stay real text in the built HTML: both spans in the banner
+  heading, the About Me sentence, titles, descriptions and the JSON-LD
+  (\_includes/seo.html, person-schema.html). assets/js/name-cycle.js only changes how the
+  cloth print draws the heading (one name at a time, changing in a short fall of code
+  glyphs); never let it create, hide or rewrite the page's text, add a second canvas to
+  the banner, or change the heading's height. Reduced motion, no JavaScript and print
+  show both names. ?name-cycle=en|native|static|native@0.5 holds a state for tests. See
+  docs/TEMPLATE.md, "The two names".
 - Keep all publication metadata in \_bibliography/papers.bib. The local Ruby generator
   adapts BibTeX to the native paper-box includes on both publication routes.
 - Preserve publication status, authorship, and existing links. Do not invent CV facts.

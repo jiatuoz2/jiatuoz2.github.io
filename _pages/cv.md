@@ -1,6 +1,7 @@
 ---
 permalink: /cv/
 title: Curriculum Vitae
+description: Curriculum vitae.
 ---
 
 <h1>Curriculum Vitae</h1>

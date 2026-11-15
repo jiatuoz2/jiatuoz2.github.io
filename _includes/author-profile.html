@@ -1,5 +1,12 @@
 {% assign author = site.author %}
-<section class="profile-banner" data-profile-banner itemscope itemtype="https://schema.org/Person" aria-label="Profile and contact information">
+<section
+  class="profile-banner"
+  data-profile-banner
+  itemscope
+  itemtype="https://schema.org/Person"
+  itemid="{{ '/' | absolute_url }}#person"
+  aria-label="Profile and contact information"
+>
   <div
     class="banner-scroll-grip"
     data-scroll-grip
@@ -28,7 +35,14 @@
           <img src="{{ author.avatar | relative_url }}" alt="{{ author.name | escape }}" width="278" height="278" itemprop="image" />
         </div>
         <div class="banner-identity">
-          <h2 class="author__name" itemprop="name">{{ author.name }}</h2>
+          <h2 class="author__name" data-name-cycle>
+            <span class="author__name-en" itemprop="name">{{ author.name }}</span>
+            {% if author.native_name %}
+            <span class="author__name-native" lang="{{ author.native_name_lang | default: 'zh-Hans' }}" itemprop="alternateName">
+              {{- author.native_name -}}
+            </span>
+            {% endif %}
+          </h2>
           <p class="author__bio">{{ author.bio }}</p>
           <p class="author__affiliation">{{ author.employer }}</p>
           <p class="banner-location"><i class="fas fa-map-marker-alt" aria-hidden="true"></i> {{ author.location }}</p>
@@ -41,23 +55,23 @@
             >
           </li>
           <li>
-            <a href="{{ author.googlescholar }}"
+            <a href="{{ author.googlescholar }}" rel="me" itemprop="sameAs"
               ><i class="fas fa-fw fa-graduation-cap" aria-hidden="true"></i><span>Google Scholar</span
               ><span class="banner-link-arrow" aria-hidden="true">↗</span></a
             >
           </li>
           <li>
-            <a href="https://orcid.org/{{ author.orcid }}"
+            <a href="https://orcid.org/{{ author.orcid }}" rel="me" itemprop="sameAs"
               ><i class="banner-icon-orcid" aria-hidden="true"></i><span>ORCID</span><span class="banner-link-arrow" aria-hidden="true">↗</span></a
             >
           </li>
           <li>
-            <a href="https://github.com/{{ author.github }}"
+            <a href="https://github.com/{{ author.github }}" rel="me" itemprop="sameAs"
               ><i class="fab fa-fw fa-github" aria-hidden="true"></i><span>GitHub</span><span class="banner-link-arrow" aria-hidden="true">↗</span></a
             >
           </li>
           <li>
-            <a href="https://www.linkedin.com/in/{{ author.linkedin }}/"
+            <a href="https://www.linkedin.com/in/{{ author.linkedin }}/" rel="me" itemprop="sameAs"
               ><i class="fab fa-fw fa-linkedin" aria-hidden="true"></i><span>LinkedIn</span
               ><span class="banner-link-arrow" aria-hidden="true">↗</span></a
             >

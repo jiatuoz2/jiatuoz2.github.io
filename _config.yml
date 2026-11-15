@@ -1,6 +1,9 @@
 title: 'Jiatuo "Charlie" Zou'
 description: HCI researcher at Northwestern University's SPICE Lab, working on XR, wearable computing, multimodal AI, and novel sensing.
-url: https://jiatuoz2.github.io
+# The address visitors and search engines end up on: GitHub Pages redirects
+# jiatuoz2.github.io to this custom domain (the gh-pages branch carries its CNAME).
+# Canonical links, Open Graph URLs, the sitemap and robots.txt are all built from it.
+url: https://charliezou.com
 baseurl: ""
 repository: jiatuoz2/jiatuoz2.github.io
 timezone: America/Chicago
@@ -8,6 +11,16 @@ encoding: utf-8
 
 author:
   name: 'Jiatuo "Charlie" Zou'
+  # The name in Chinese, written once here. The profile banner, page titles, descriptions
+  # and structured data all read it, so people searching for it can find the site.
+  native_name: 邹家拓
+  native_name_lang: zh-Hans
+  # Other forms people search for or that papers are published under.
+  alternate_names: [Jiatuo Zou, Charlie Zou]
+  given_name: Jiatuo
+  family_name: Zou
+  job_title: HCI Researcher
+  alumni_of: [Columbia University]
   avatar: /assets/img/profile.jpg
   bio: HCI Researcher · SPICE Lab
   location: Evanston, Illinois
@@ -22,6 +35,12 @@ author:
 # Use the existing citation updater, rather than assuming an upstream stats branch.
 google_scholar_stats_enabled: false
 google_analytics_id:
+
+# Search-engine ownership checks. Paste only the token (the content="..." value of the
+# meta tag each webmaster tool gives you); an empty key prints nothing.
+google_site_verification:
+bing_site_verification:
+baidu_site_verification:
 
 include: [_pages]
 exclude:

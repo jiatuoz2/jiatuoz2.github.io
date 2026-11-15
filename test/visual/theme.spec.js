@@ -107,7 +107,8 @@ test("the cloth is dyed again by the switch in both directions, including while 
 // Uses normal motion deliberately: reduced motion already disables the template's
 // text transitions, which would hide stale colors read in the middle of a fade.
 test("switching prints the same ink as loading in night mode", async ({ page }) => {
-  await page.goto("/");
+  // The name is held on one script, so both prints are compared in the same state.
+  await page.goto("/?name-cycle=en");
   const banner = page.locator(".profile-banner");
   await expect(banner).toHaveClass(/cloth-rendered/);
   await page.getByRole("switch", { name: "Night mode" }).click();

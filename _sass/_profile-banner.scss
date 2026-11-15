@@ -15,6 +15,8 @@
   --banner-cloth-3: #f3efe5;
   --banner-cloth-4: #e7e3da;
   --banner-hover-rule: #224b8d80;
+  // The falling code of the name change (assets/js/name-cycle.js): a quiet ink green.
+  --banner-name-code: #0b7a52;
 }
 .banner-rigging {
   position: absolute;
@@ -157,7 +159,7 @@
   display: block;
   width: 128px;
   height: 128px;
-  margin: 0 auto 19px;
+  margin: 0 auto 13px;
 }
 .profile-banner .author__avatar img {
   display: block;
@@ -172,12 +174,42 @@
   box-shadow: none;
 }
 .profile-banner .author__name {
-  margin: 0 0 11px;
+  margin: 0 0 7px;
   font-size: 1.25em;
   line-height: 1.35;
   color: #00274c;
   font-family: "Newsreader", Georgia, serif;
   font-weight: 700;
+}
+// Both names are always in the page, one under the other. This is what shows without
+// JavaScript, with reduced motion, on keyboard focus and in print. With motion allowed the
+// cloth print shows one name at a time in this same two-line box (assets/js/name-cycle.js),
+// so the banner never changes height.
+.author__name-en,
+.author__name-native {
+  display: block;
+}
+// Newsreader has no Chinese glyphs: name the system serif faces instead of leaving it to
+// the browser's fallback, so the page and the cloth print agree.
+.profile-banner .author__name-native {
+  font-family: "Songti SC", "Noto Serif CJK SC", "Source Han Serif SC", "Source Han Serif CN", "SimSun", "Newsreader", Georgia, serif;
+  font-size: 0.76em;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: 0.14em;
+  text-indent: 0.14em;
+}
+// Before the cloth is drawn (the head script sets name-cycle-pending when the print is
+// going to show one name at a time), the heading looks like that first print: the first
+// name alone, in the middle of the two-line box. Half the second line's height
+// (0.76em * 1.3) moves it there. Opacity keeps the second name in the accessibility tree.
+@media screen {
+  .name-cycle-pending .profile-banner:not(.cloth-rendered) .author__name-en {
+    transform: translateY(0.494em);
+  }
+  .name-cycle-pending .profile-banner:not(.cloth-rendered) .author__name-native {
+    opacity: 0;
+  }
 }
 .profile-banner .author__bio,
 .profile-banner .author__affiliation {
@@ -324,7 +356,7 @@
   .profile-banner .author__avatar {
     width: 120px;
     height: 120px;
-    margin-bottom: 15px;
+    margin-bottom: 11px;
   }
   .profile-banner .banner-links {
     display: grid;

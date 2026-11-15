@@ -13,7 +13,7 @@ redirect_from: [/about/, /about.html]
 
 <h1 id="about-me">About Me</h1>
 
-I am Jiatuo "Charlie" Zou, a researcher in **Human-Computer Interaction (HCI)** and a graduate of Columbia University (M.S.). I recently joined the [SPICE Lab](https://spice-lab.org/) at Northwestern University, advised by [Karan Ahuja](https://karan-ahuja.com/). Previously, I was a research assistant in the [CGUI Lab](https://graphics.cs.columbia.edu/home) at Columbia University, working with [Steven Feiner](https://www.cs.columbia.edu/~feiner/).
+I am Jiatuo "Charlie" Zou (<span lang="{{ site.author.native_name_lang }}">{{ site.author.native_name }}</span>), a researcher in **Human-Computer Interaction (HCI)** and a graduate of Columbia University (M.S.). I recently joined the [SPICE Lab](https://spice-lab.org/) at Northwestern University, advised by [Karan Ahuja](https://karan-ahuja.com/). Previously, I was a research assistant in the [CGUI Lab](https://graphics.cs.columbia.edu/home) at Columbia University, working with [Steven Feiner](https://www.cs.columbia.edu/~feiner/).
 
 <h2 id="research-interests" class="research-heading">Research interests</h2>
 

@@ -18,6 +18,16 @@
     document.documentElement.dataset.theme = theme;
     document.documentElement.classList.add("theme-switching");
   })();
+  // With motion allowed the cloth prints one name at a time, starting with the first. Until
+  // the cloth is drawn the heading shows the same (see "name-cycle-pending" in
+  // _sass/_profile-banner.scss), so the name does not move when the print takes over.
+  // profile-banner.js removes the class; the timer is the fallback if it never runs.
+  (() => {
+    const root = document.documentElement;
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches || /[?&]name-cycle=static(&|$)/.test(location.search)) return;
+    root.classList.add("name-cycle-pending");
+    addEventListener("load", () => setTimeout(() => root.classList.remove("name-cycle-pending"), 3000));
+  })();
 </script>
 
 <!-- For all browsers -->
